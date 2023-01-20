@@ -1,0 +1,131 @@
+@page "/project/{ProjectId}/backlog"
+@using System.Net.Http.Headers
+@using MyApplication.Models
+@inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
+@inject IDialogService Dialog
+<PageTitle>Backlog</PageTitle>
+<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SprintList=@SprintList />
+<MudDropContainer T="Issue" Items=@ProjectData.Issues
+    ItemsSelector="@((item,dropzone) => item.SprintId.ToString() == dropzone)" ItemDropped="ItemUpdated"
+    @ref="_container">
+    <ChildContent>
+        @if (ProjectData.Sprints != null)
+        {
+            @foreach (Sprint? sprint in ProjectData.Sprints)
+            {
+                if (!sprint.IsDone)
+                {
+                    var dropzone = sprint.ID.ToString();
+                    <MudPaper Class="my-6 flex-grow-1" Elevation="2">
+                        <MudList Class="d-flex flex-column mud-height-full">
+                            <MudListSubheader>
+                                <div class="d-flex flex-wrap flex-grow-1 align-content-center">
+                                    <div class="d-flex flex-wrap flex-grow-1 align-content-center">
+                                        @sprint.Name
+                                    </div>
+                                    @if (ProjectData.ActiveSprint != sprint.ID && sprint.Name != "Backlog")
+                                    {
+                                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.DirectionsRun"
+                            Color="Color.Primary" OnClick=@(() => StartSprint(sprint.ID))>Start</MudButton>
+                                    }
+                                </div>
+                            </MudListSubheader>
+                            <MudDivider />
+                            <MudDropZone T="Issue" Identifier="@dropzone" Class="flex-grow-1 pa-3" AllowReorder="true" />
+                        </MudList>
+                    </MudPaper>
+                }
+            }
+        }
+    </ChildContent>
+    <ItemRenderer>
+        <IssueItem Context=@context ProjectId=@ProjectId ReloadResource=@ReloadResource UserList=@UserList
+            SprintList=@SprintList />
+    </ItemRenderer>
+</MudDropContainer>
+
+@code {
+    [Parameter]
+    public string ProjectId { get; set; }
+
+    [CascadingParameter]
+    public MainLayout? Ancestor { get; set; }
+    Project? ProjectData = new Project() { };
+    List<Sprint> SprintList = new();
+    List<User> UserList = new();
+    private MudDropContainer<Issue> _container;
+
+    void ItemUpdated(MudItemDropInfo<Issue> dropItem)
+    {
+        if (dropItem.Item.SprintId.ToString() != dropItem.DropzoneIdentifier)
+        {
+            MoveIssueToDiffSprint(dropItem.Item.ID, Int16.Parse(dropItem.DropzoneIdentifier));
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+            Snackbar.Add(dropItem.Item.ID + " has been moved to a different sprint!", Severity.Success);
+        }
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async protected override Task OnInitializedAsync()
+    {
+        UpdateParentComponentProjectId();
+
+        ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
+        UserList = ProjectData.GetUserList();
+        SprintList = ProjectData.GetSprintList();
+    }
+
+    async void ReloadResource()
+    {
+        ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
+        UserList = ProjectData.GetUserList();
+        SprintList = ProjectData.GetSprintList();
+        await InvokeAsync(StateHasChanged);
+        _container.Refresh();
+    }
+
+    async void MoveIssueToDiffSprint(string? issueId, int? relocSprintId)
+    {
+        var queryBody = new { IssueId = issueId, SprintId = relocSprintId };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        await client.PostAsJsonAsync("http://localhost:8000/issue/move-sprint", queryBody);
+        ReloadResource();
+    }
+
+    async Task<Project> GetProjectByUrl(int ProjectId)
+    {
+        var getProjectQueryBody = new { ProjectID = ProjectId };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/project/get-by-id", getProjectQueryBody);
+        var project = await response.Content.ReadFromJsonAsync<Project>();
+        return project;
+    }
+
+    void UpdateParentComponentProjectId()
+    {
+        Ancestor.ProjectId = ProjectId;
+        Ancestor?.NotifyChange();
+    }
+
+    async void StartSprint(int? sprintId)
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("SprintId", sprintId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<StartSprintForm>("", dialogParam, options);
+    }
+}

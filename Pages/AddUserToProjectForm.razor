@@ -1,0 +1,92 @@
+@using System.Net.Http.Headers
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex flex-grow-1 gap-2">
+            <MudTextField @bind-Value="MemberToInvite" Label="Members" Variant="Variant.Outlined" />
+            <MudButton Class="my-1" Size="Size.Large" Variant="Variant.Text" EndIcon="@Icons.Material.Filled.Add"
+                Color="Color.Info" OnClick="@AddUserToList">Add
+            </MudButton>
+        </div>
+
+        <MudPaper Class="pa-2 my-2" Outlined="true">
+            @if (!ProjectMembers.Any())
+            {
+                <div Class="d-flex flex-column flex-grow-1 align-center" Elevation="0">
+                    <MudText Typo="Typo.overline" Align="Align.Center">No members have been added</MudText>
+                </div>
+            }
+            else
+            {
+                foreach (var email in ProjectMembers)
+                {
+                    <MudDivider Class="my-1" />
+                    <MudListItem Avatar="@Icons.Material.Filled.Email">
+                        <MudText Typo="Typo.overline" Align="Align.Center">@email</MudText>
+                    </MudListItem>
+                }
+                <MudDivider Class="my-1" />
+            }
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick=@(() => Submit())>Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectId { get; set; }
+    [Parameter] public Action ReloadResource { get; set; }
+    List<string> ProjectMembers = new();
+    string MemberToInvite = string.Empty;
+    void Cancel() => MudDialog.Cancel();
+
+    void AddUserToList()
+    {
+        ProjectMembers.Add(MemberToInvite);
+        MemberToInvite = string.Empty;
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async void Submit()
+    {
+        var cookieVal = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", cookieVal.ToString());
+        foreach (var emailToInvite in ProjectMembers)
+        {
+            var projectDetails = new { Email = emailToInvite, ProjectId = Int16.Parse(ProjectId) };
+            var response = await client.PostAsJsonAsync("http://localhost:8000/project/add-user", projectDetails);
+            ShowSnackbarQueryStatus(response.StatusCode.ToString(), emailToInvite);
+        }
+        AfterUserInvite();
+    }
+
+    void ShowSnackbarQueryStatus(string statusCode, string email)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add(email + " has been invited to the project!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(email + " failed to be added to the project!", Severity.Error);
+        }
+    }
+
+    async void AfterUserInvite()
+    {
+        MudDialog.Close();
+        ReloadResource.Invoke();
+    }
+}

@@ -1,0 +1,27 @@
+@inherits LayoutComponentBase
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div>
+    @Body
+</div>
+
+@code {
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async protected override Task OnInitializedAsync()
+    {
+        var jwt = await ReadCookies();
+        if (jwt == "")
+        {
+            NavManager.NavigateTo("/login");
+        }
+    }
+}

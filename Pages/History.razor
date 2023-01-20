@@ -1,0 +1,23 @@
+@page "/project/{ProjectId}/history"
+<PageTitle>History</PageTitle>
+<div>
+    <MudPagination Variant="Variant.Filled" Count="4" />
+</div>
+@code {
+    [Parameter]
+    public string ProjectId { get; set; }
+
+    [CascadingParameter]
+    public MainLayout? Ancestor { get; set; }
+
+    async protected override Task OnInitializedAsync()
+    {
+        UpdateParentComponentProjectId();
+    }
+
+    void UpdateParentComponentProjectId()
+    {
+        Ancestor.ProjectId = ProjectId;
+        Ancestor?.NotifyChange();
+    }
+}

@@ -1,0 +1,216 @@
+@page "/project/{ProjectId}/user-info"
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+@using System.Net.Http.Headers
+<PageTitle>Settings</PageTitle>
+
+<div class="d-flex flex-grow-1 justify-center my-16">
+    <MudStack Spacing="16">
+        <MudPaper Outlined="true" Width="50vw" Class="pa-16">
+            <MudGrid Class="mt-6" Justify="Justify.Center">
+
+                <MudItem xs="6">
+                    <MudStack Spacing="5">
+                        <MudText Typo="Typo.h6">User Information</MudText>
+                        <div class="d-flex justify-space-between flex-grow-1 gap-4">
+                            <MudTextField @bind-Value="FirstName" Label="First Name" Variant="Variant.Outlined"
+                                Class="flex-auto flex-grow-1" />
+                            <MudTextField @bind-Value="LastName" Label="Last Name" Variant="Variant.Outlined"
+                                Class="flex-auto flex-grow-1" />
+                        </div>
+                        <MudTextField Adornment="Adornment.Start" AdornmentIcon="@Icons.Outlined.AccountCircle"
+                            @bind-Value="Username" Label="Username" Variant="Variant.Outlined"></MudTextField>
+                        <MudTextField Adornment="Adornment.Start" AdornmentIcon="@Icons.Outlined.Email"
+                            @bind-Value="EmailValue" Label="Email" Variant="Variant.Outlined"></MudTextField>
+                        <MudButton StartIcon="@Icons.Material.Filled.Info" Variant="Variant.Filled" Color="Color.Info" OnClick="OnUpdateInfoClick" >Update</MudButton>
+                    </MudStack>
+                </MudItem>
+
+                <MudItem xs="6">
+                    <MudStack Spacing="5">
+                        <MudText Typo="Typo.h6">Security</MudText>
+                        <MudTextField @bind-Value="Password" Label="Current Password" Variant="Variant.Outlined"
+                            InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon"
+                            OnAdornmentClick="ShowHidePassClick" AdornmentAriaLabel="Show Password" />
+                        <MudTextField @bind-Value="NewPassword" Label="New Password" Variant="Variant.Outlined"
+                            InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon"
+                            OnAdornmentClick="ShowHidePassClick" AdornmentAriaLabel="Show Password" />
+                        <MudTextField @bind-Value="RNewPassword" Label="Confirm New Password" Variant="Variant.Outlined"
+                            InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon"
+                            OnAdornmentClick="ShowHidePassClick" AdornmentAriaLabel="Show Password" />
+
+                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Outlined.WarningAmber" Color="Color.Error" OnClick=@OnChangePasswordClick>Change Password</MudButton>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="1" />
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Outlined="true" Width="50vw" Class="pa-16">
+            <MudText Typo="Typo.h5" Class="mb-4">Accessibility</MudText>
+            <MudDivider />
+            @foreach (var item in accessibilitySettingsList)
+            {
+                <div Class="d-flex align-content-center flex-wrap flex-grow-1 gap-4">
+                    <div Class="d-flex align-content-center flex-wrap flex-grow-1">
+                        @item
+                    </div>
+                    <MudSwitch @bind-Checked="@Label_Switch1" Color="Color.Info" />
+                </div>
+                <MudDivider />
+            }
+        </MudPaper>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter]
+    public string ProjectId { get; set; }
+
+    [CascadingParameter]
+    public MainLayout? Ancestor { get; set; }
+
+    User LoggedUser {get; set;} = new();
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+    public string EmailValue { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+    public string RNewPassword { get; set; } = string.Empty;
+    public bool Label_Switch1 { get; set; } = false;
+    string[] accessibilitySettingsList = { "Dark Mode", "Quick Load", "Remember User", "Disable animations", "Enable Acceleration", "Disable Animation", "Color Blind Mode", "Small Font", "Enable Cookies", "Enable Telemetry", "Allow Cross-Site cookies", "Auto Set Time Zone" };
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+    private string securityWarning = "";
+    async protected override Task OnInitializedAsync()
+    {
+        UpdateParentComponentProjectId();
+        ReloadResource();
+    }
+
+    async void ReloadResource()
+    {
+        LoggedUser = await GetUserByCookie();
+        FirstName = LoggedUser.FirstName;
+        LastName = LoggedUser.LastName;
+        Username = LoggedUser.Username;
+        EmailValue = LoggedUser.Email;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task<User> GetUserByCookie()
+    {
+        var queryBody = new { };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/user/get", queryBody);
+        var user = await response.Content.ReadFromJsonAsync<User>();
+        return user;
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    void UpdateParentComponentProjectId()
+    {
+        Ancestor.ProjectId = ProjectId;
+        Ancestor?.NotifyChange();
+    }
+
+    void ShowHidePassClick()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+
+    async void OnUpdateInfoClick()
+    {
+        var queryBody = new { 
+            FirstName = FirstName,
+            LastName = LastName,
+            Username = Username,
+            Email = EmailValue,
+        };
+
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+
+        var response = await client.PostAsJsonAsync("http://localhost:8000/user/update", queryBody);
+        OnUpdateInfoSuccess(response.StatusCode.ToString());
+    }
+
+    async void OnChangePasswordClick()
+    {
+        var queryBody = new { 
+            Password = Password,
+            NewPassword = NewPassword,
+            RenewPassword = RNewPassword
+        };
+
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+
+        var response = await client.PostAsJsonAsync("http://localhost:8000/user/change-password", queryBody);
+        OnChangePassSuccess(response.StatusCode.ToString());
+    }
+
+    void ShowSnackbarUpdateInfoStat(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("User info has been successfully updated!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to update user info!", Severity.Error);
+        }
+    }
+
+    void ShowSnackbarChangePassStat(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("Password has been successfully changed!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to change password!", Severity.Error);
+        }
+    }
+
+    void OnUpdateInfoSuccess(string statusCode)
+    {
+        ShowSnackbarUpdateInfoStat(statusCode);
+        ReloadResource();
+    }
+
+    void OnChangePassSuccess(string statusCode)
+    {
+        ShowSnackbarChangePassStat(statusCode);
+        ReloadResource();
+    }
+}

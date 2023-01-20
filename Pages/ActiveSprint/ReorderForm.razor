@@ -1,0 +1,79 @@
+@using System.Net.Http.Headers
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            @foreach (var swimlane in SwimlaneList)
+            {
+                <MudPaper Class="pa-3">
+                    <div class="d-flex flex-grow-1 gap-4">
+                        <div class="flex-grow-1">
+                            @swimlane.Name
+                        </div>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" />
+                    </div>
+                </MudPaper>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectId { get; set; }
+    [Parameter] public Action ReloadResource { get; set; }
+    [Parameter] public List<Swimlane> SwimlaneList { get; set; }
+    List<Swimlane> SwimlaneReorder { get; set; } = new();
+    void Cancel() => MudDialog.Cancel();
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+
+    }
+
+    async void CreateSubmit()
+    {
+        var requestBody = new
+        {
+
+        };
+
+        var jwt = await ReadCookies();
+        var client = new HttpClient();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/issue/add", requestBody);
+        ShowSnackbarCreateStatus(response.StatusCode.ToString());
+        AfterIssueCreate();
+    }
+
+    void ShowSnackbarCreateStatus(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("New issue has beed added!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to add new issue!", Severity.Error);
+        }
+    }
+
+    async void AfterIssueCreate()
+    {
+        MudDialog.Close();
+        ReloadResource.Invoke();
+    }
+}

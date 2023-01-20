@@ -1,0 +1,38 @@
+<MudPaper Class="pa-3 my-6" Elevation="3" Square="true" Width="200">
+    <MudText Typo="Typo.body2" Class="mb-1 overflow-hidden" Style="height: 3em;"> @Context.Title</MudText>
+    <MudDivider Class="my-2" />
+    <MudPaper Class="d-flex flex-row-reverse flex-grow-1 gap-1 align-center" Elevation="0">
+        @if (Context.AssigneeId == null)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.PersonOff" aria-label="delete" Color="Color.Warning" Size="Size.Small" />
+        }
+        else
+        {
+            <MudAvatar Class="blue lighten-3" Variant="Variant.Filled" Size="Size.Small">
+                @GetAssigneeNameById(Context.AssigneeId).ToUpper()[0]
+            </MudAvatar>
+        }
+        <MudIcon Icon=@(Context.GetIssueIconByType()) Class=@("flex-none d-flex " + Context.GetIssueColorByType()) />
+        <MudIcon Icon=@(Context.GetPriorityIcon()) Class=@("flex-none d-flex " + Context.GetPriorityIconColor()) />
+        <div class="flex-grow-1">
+            <MudText Typo="Typo.overline">@Context.ID</MudText>
+        </div>
+    </MudPaper>
+</MudPaper>
+
+@code {
+    [Parameter] public Issue Context { get; set; } = new();
+    [Parameter] public List<User> UserList { get; set; } = new();
+
+    public string GetAssigneeNameById(int? assigneeId)
+    {
+        foreach (var user in UserList)
+        {
+            if (user.ID == assigneeId)
+            {
+                return user.FirstName;
+            }
+        }
+        return "?";
+    }
+}

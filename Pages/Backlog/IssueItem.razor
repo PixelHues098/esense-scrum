@@ -1,0 +1,97 @@
+@inject IDialogService Dialog
+<MudListItem Class="py-0">
+    <div Class="d-flex align-center gap-4" Style="font-size: 14px;">
+        <MudChip Label="true" Style="width: 100px;">@Context.ID</MudChip>
+
+        <MudIcon Icon=@(Context.GetIssueIconByType()) Class=@("flex-none d-flex " + Context.GetIssueColorByType()) />
+
+        <div Class="flex-none d-flex overflow-hidden" Style="width: 250px; white-space: nowrap;">
+            @Context.Title
+        </div>
+
+        <MudIcon Icon=@Icons.Filled.KeyboardArrowRight Color="Color.Dark" />
+
+        <div Class="flex-1 d-flex py-1 overflow-hidden" Style="white-space: nowrap;">
+            @Context.Description
+        </div>
+
+        <MudChip Text="blue" Variant="Variant.Filled" Class="white-text" Size="Size.Small">
+            {EPIC TITLE HERE}
+        </MudChip>
+
+
+        @if (Context.AssigneeId == null)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.PersonOff" aria-label="delete" Color="Color.Warning" Size="Size.Small" />
+        }
+        else
+        {
+            <MudAvatar Class="blue lighten-3" Variant="Variant.Filled" Size="Size.Small">
+                @GetAssigneeNameById(Context.AssigneeId).ToUpper()[0]
+            </MudAvatar>
+        }
+
+        <MudIcon Icon=@(Context.GetPriorityIcon()) Class=@(Context.GetPriorityIconColor()) />
+        <MudDivider Vertical="true" FlexItem="true" />
+        <div Class="d-flex align-center gap-1">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" aria-label="delete" Size="Size.Small"
+                Color="Color.Tertiary" OnClick=@(() => OpenIssueDialog("update")) />
+            <MudIconButton Icon="@Icons.Material.Filled.Info" aria-label="delete" Size="Size.Small" Color="Color.Info"
+                OnClick=@(() => OpenIssueDialog("show")) />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" aria-label="delete" Size="Size.Small"
+                Color="Color.Error" OnClick=@(() => DeleteIssueDialog()) />
+        </div>
+    </div>
+</MudListItem>
+
+@code {
+    [Parameter] public Issue Context { get; set; }
+    [Parameter] public List<User> UserList { get; set; } = new();
+    [Parameter] public List<Sprint> SprintList { get; set; } = new();
+    [Parameter] public Action? ReloadResource { get; set; }
+    [Parameter] public string ProjectId { get; set; } = string.Empty;
+
+    public void OpenIssueDialog(string accessType)
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+        dialogParam.Add("SprintList", SprintList);
+        dialogParam.Add("UserList", UserList);
+        dialogParam.Add("AccessType", accessType);
+        dialogParam.Add("Context", Context);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        if (accessType == "show")
+        {
+            Dialog.Show<IssueForm>(Context.ID + " details", dialogParam, options);
+        }
+        else
+        {
+            Dialog.Show<IssueForm>("Edit " + Context.ID + " details", dialogParam, options);
+        }
+    }
+
+    public string GetAssigneeNameById(int? assigneeId)
+    {
+        foreach (var user in UserList)
+        {
+            if (user.ID == assigneeId)
+            {
+                return user.FirstName;
+            }
+        }
+        return "?";
+    }
+
+    public void DeleteIssueDialog()
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+        dialogParam.Add("Context", Context);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<DeleteIssueForm>("Delete issue " + Context.ID + "?", dialogParam, options);
+    }
+}

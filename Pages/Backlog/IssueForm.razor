@@ -1,0 +1,336 @@
+@using System.Net.Http.Headers
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <div Class="d-flex flex-column flex-grow-1 gap-2">
+            <MudTextField @bind-Value="Title" Label="Title" Variant="Variant.Outlined" Disabled=@isShow />
+            <MudTextField T="string" Label="Description" Variant="Variant.Outlined" @bind-Value="Desc" Lines="3"
+                Disabled=@isShow />
+            <MudDivider Class="my-4" />
+            <div class="d-flex flex-grow-1 gap-2">
+                <MudSelect T="string" Label="Sprint" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined"
+                    @bind-Value=@SprintName Disabled=@isShow>
+                    @foreach (var sprint in SprintList)
+                    {
+                        <MudSelectItem Value=@sprint.Name />
+                    }
+                </MudSelect>
+                <MudSelect T="string" Label="Asignee" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined"
+                    @bind-Value=@AssigneeUsername Disabled=@isShow>
+                    <MudSelectItem Value=@("None") />
+                    @foreach (var user in UserList)
+                    {
+                        <MudSelectItem Value=@(user.Username) />
+                    }
+                </MudSelect>
+            </div>
+            <div class="d-flex flex-grow-1 gap-2">
+                <MudSelect T="string" Label="Priority" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined"
+                    @bind-Value=@Priority Disabled=@isShow>
+                    <MudSelectItem Value=@("Very Low") />
+                    <MudSelectItem Value=@("Low") />
+                    <MudSelectItem Value=@("Neutral") />
+                    <MudSelectItem Value=@("High") />
+                    <MudSelectItem Value=@("Very High") />
+                </MudSelect>
+                <MudSelect T="string" Label="Type" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined"
+                    @bind-Value=@Type Disabled=@isShow>
+                    <MudSelectItem Value=@("Task") />
+                    <MudSelectItem Value=@("Bugfix") />
+                    <MudSelectItem Value=@("Story") />
+                </MudSelect>
+                <MudNumericField @bind-Value="Points" Label="Points" Variant="Variant.Outlined" Step="1" Min="0"
+                    Max="20" Disabled=@isShow />
+            </div>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        @switch (AccessType)
+        {
+            case "create":
+                <MudButton OnClick="Cancel">Cancel</MudButton>
+                <MudButton Color="Color.Primary" OnClick="CreateSubmit">Create</MudButton>
+                break;
+            case "update":
+                <MudButton OnClick="Cancel">Cancel</MudButton>
+                <MudButton Color="Color.Primary" OnClick="UpdateSubmit">Update</MudButton>
+                break;
+            case "show":
+                <MudButton OnClick="Cancel">Close</MudButton>
+                break;
+            default:
+                break;
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectId { get; set; }
+    [Parameter] public Action ReloadResource { get; set; }
+    [Parameter] public List<Sprint> SprintList { get; set; }
+    [Parameter] public List<User> UserList { get; set; }
+    [Parameter] public string AccessType { get; set; }
+    [Parameter] public Issue? Context { get; set; }
+    string? Title { get; set; } = string.Empty;
+    string? Desc { get; set; } = string.Empty;
+    string? Type { get; set; } = string.Empty;
+    string? SprintName { get; set; } = string.Empty;
+    string? AssigneeUsername { get; set; } = string.Empty;
+    string? Priority { get; set; } = string.Empty;
+    bool isShow { get; set; } = false;
+    int? Points { get; set; }
+    void Cancel() => MudDialog.Cancel();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Context != null)
+        {
+            Title = Context.Title;
+            Desc = Context.Description;
+            Priority = GetPriorityInputVal(Context.Priority);
+            Points = Context.Points;
+            Type = GetTypeInputVal(Context.Type);
+            AssigneeUsername = GetUserInputVal(Context.AssigneeId, UserList);
+            SprintName = GetSprintInputVal(Context.SprintId, SprintList);
+        }
+
+        if (AccessType == "show")
+        {
+            isShow = true;
+        }
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async void CreateSubmit()
+    {
+        var requestBody = new
+        {
+            Title = Title,
+            Desc = Desc,
+            Type = GetTypeQueryVal(Type),
+            ProjectId = Int16.Parse(ProjectId),
+            AssigneeId = GetUserQueryVal(AssigneeUsername, UserList),
+            SprintId = GetSprintQueryVal(SprintName, SprintList),
+            Points = Points,
+            Priority = GetPriorityQueryVal(Priority)
+        };
+
+        var jwt = await ReadCookies();
+        var client = new HttpClient();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/issue/add", requestBody);
+        ShowSnackbarCreateStatus(response.StatusCode.ToString());
+        AfterIssueCreate();
+    }
+
+    async void UpdateSubmit()
+    {
+        var requestBody = new
+        {
+            ID = Context.ID,
+            Title = Title,
+            Desc = Desc,
+            Type = GetTypeQueryVal(Type),
+            ProjectId = Int16.Parse(ProjectId),
+            AssigneeId = GetUserQueryVal(AssigneeUsername, UserList),
+            SprintId = GetSprintQueryVal(SprintName, SprintList),
+            Points = Points,
+            Priority = GetPriorityQueryVal(Priority)
+        };
+
+        var jwt = await ReadCookies();
+        var client = new HttpClient();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/issue/update", requestBody);
+        ShowSnackbarUpdateStatus(response.StatusCode.ToString(), Context.ID);
+        AfterIssueCreate();
+    }
+
+    void ShowSnackbarCreateStatus(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("New issue has beed added!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to add new issue!", Severity.Error);
+        }
+    }
+
+    void ShowSnackbarUpdateStatus(string statusCode, string issueId)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("Issue " + issueId + " has been successfully updated!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to update issue " + issueId + "!", Severity.Error);
+        }
+    }
+
+    string GetPriorityQueryVal(string priorityVal)
+    {
+        string queryVal = "";
+        switch (priorityVal)
+        {
+            case "Very Low":
+                queryVal = "very low";
+                break;
+            case "Low":
+                queryVal = "low";
+                break;
+            case "Neutral":
+                queryVal = "neutral";
+                break;
+            case "High":
+                queryVal = "high";
+                break;
+            case "Very High":
+                queryVal = "very high";
+                break;
+            default:
+                queryVal = "neutral";
+                break;
+        }
+        return queryVal;
+    }
+
+    string GetPriorityInputVal(string priorityVal)
+    {
+        string inputVal = "";
+        switch (priorityVal)
+        {
+            case "very low":
+                inputVal = "Very Low";
+                break;
+            case "low":
+                inputVal = "Low";
+                break;
+            case "neutral":
+                inputVal = "Neutral";
+                break;
+            case "high":
+                inputVal = "High";
+                break;
+            case "very high":
+                inputVal = "Very High";
+                break;
+            default:
+                inputVal = "Neutral";
+                break;
+        }
+        return inputVal;
+    }
+
+    string GetTypeQueryVal(string typeVal)
+    {
+        string queryVal = "";
+        switch (typeVal)
+        {
+            case "Task":
+                queryVal = "task";
+                break;
+            case "Bugfix":
+                queryVal = "bugfix";
+                break;
+            case "Story":
+                queryVal = "story";
+                break;
+            default:
+                queryVal = "story";
+                break;
+        }
+
+        return queryVal;
+    }
+
+    string GetTypeInputVal(string typeVal)
+    {
+        string inputVal = "";
+        switch (typeVal)
+        {
+            case "task":
+                inputVal = "Task";
+                break;
+            case "bugfix":
+                inputVal = "Bugfix";
+                break;
+            case "story":
+                inputVal = "Story";
+                break;
+            default:
+                inputVal = "Story";
+                break;
+        }
+        return inputVal;
+    }
+
+    int GetUserQueryVal(string userVal, List<User> userList)
+    {
+        foreach (var user in userList)
+        {
+            if (user.Username == userVal)
+            {
+                return user.ID;
+            }
+        }
+
+        return 0;
+    }
+
+    string GetUserInputVal(int? userId, List<User> userList)
+    {
+        foreach (var user in userList)
+        {
+            if (user.ID == userId)
+            {
+                return user.Username;
+            }
+        }
+
+        return "";
+    }
+
+    int? GetSprintQueryVal(string sprintName, List<Sprint> sprintList)
+    {
+        foreach (var sprint in sprintList)
+        {
+            if (sprint.Name == sprintName)
+            {
+                return sprint.ID;
+            }
+        }
+
+        return 0;
+    }
+
+    string GetSprintInputVal(int? sprintId, List<Sprint> sprintList)
+    {
+        foreach (var sprint in sprintList)
+        {
+            if (sprintId == sprint.ID)
+            {
+                return sprint.Name;
+            }
+        }
+        return "Backlog";
+    }
+
+    async void AfterIssueCreate()
+    {
+        MudDialog.Close();
+        ReloadResource.Invoke();
+    }
+}

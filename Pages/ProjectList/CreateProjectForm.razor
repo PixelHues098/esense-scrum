@@ -1,0 +1,92 @@
+@using System.Net.Http.Headers
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="Name" Label="Project Name" Variant="Variant.Outlined" />
+        <MudTextField T="string" Label="Description" Variant="Variant.Outlined" @bind-Value="Desc" Lines="3" />
+
+        <MudTextField @bind-Value="Key" Label="Key" Variant="Variant.Outlined" />
+        <MudDivider DividerType="DividerType.Middle" Class="my-6" />
+        <div class="d-flex flex-grow-1 gap-2">
+            <MudTextField @bind-Value="Invite" Label="Members" Variant="Variant.Outlined" />
+            <MudButton Class="my-1" Size="Size.Large" Variant="Variant.Text" EndIcon="@Icons.Material.Filled.Add"
+                Color="Color.Info" OnClick="@AddUserToList">Add
+            </MudButton>
+        </div>
+
+        <MudPaper Class="pa-2 my-2" Outlined="true">
+            @if (!ProjectMembers.Any())
+            {
+                <div Class="d-flex flex-column flex-grow-1 align-center" Elevation="0">
+                    <MudText Typo="Typo.overline" Align="Align.Center">No members have been added</MudText>
+                </div>
+            }
+            else
+            {
+                foreach (var email in ProjectMembers)
+                {
+                    <MudDivider Class="my-1" />
+                    <MudListItem Avatar="@Icons.Material.Filled.Email">
+                        <MudText Typo="Typo.overline" Align="Align.Center">@email</MudText>
+                    </MudListItem>
+                }
+                <MudDivider Class="my-1" />
+            }
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick=@(() => Submit(ProjectType))>Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectType { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Desc { get; set; } = string.Empty;
+    public string Key { get; set; } = string.Empty;
+    public string Invite { get; set; } = string.Empty;
+    public List<string> ProjectMembers { get; set; } = new List<string>();
+    void Cancel() => MudDialog.Cancel();
+
+    void AddUserToList()
+    {
+        ProjectMembers.Add(Invite);
+        Invite = string.Empty;
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async void Submit(string type)
+    {
+        var projectDetails = new { Name = Name, Desc = Desc, Key = Key, Type = type, Members = ProjectMembers };
+        var cookieVal = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", cookieVal.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/project/add", projectDetails);
+        RedirectOnCreate(response.StatusCode);
+    }
+
+    void RedirectOnCreate(System.Net.HttpStatusCode code)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (code.ToString() == "OK")
+        {
+            NavManager.NavigateTo("/projects");
+            Snackbar.Add("Project created successfully!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to create project!", Severity.Error);
+            MudDialog.Cancel();
+        }
+        MudDialog.Close();
+    }
+}

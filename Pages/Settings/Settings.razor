@@ -1,0 +1,166 @@
+@page "/project/{ProjectId}/settings"
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+@using System.Net.Http.Headers
+<PageTitle>Settings</PageTitle>
+
+@if (!(ProjectData is null) && !(LoggedUser is null))
+{
+    if (ProjectData.OwnerId == LoggedUser.ID)
+    {
+        <div class="d-flex flex-grow-1 justify-center my-16">
+            <MudStack Spacing="16">
+                <MudPaper Outlined="true" Width="50vw" Class="pa-16">
+                    <MudGrid Class="mt-6" Justify="Justify.Center">
+
+                        <MudItem xs="10">
+                            <MudStack Spacing="5">
+                                <MudText Typo="Typo.h6">Project Information</MudText>
+                                <MudTextField Adornment="Adornment.Start" AdornmentIcon="@Icons.Outlined.AccountCircle"
+                                    @bind-Value="Name" Label="Username" Variant="Variant.Outlined" />
+                                <MudTextField T="string" Label="Description" Variant="Variant.Outlined" @bind-Value="Description"
+                                    Lines="3" />
+                                <MudTextField Adornment="Adornment.Start" AdornmentIcon="@Icons.Outlined.Email"
+                                    @bind-Value="OwnerEmail" Label="Email" Variant="Variant.Outlined" />
+                                <MudButton StartIcon="@Icons.Material.Filled.Info" Variant="Variant.Filled" Color="Color.Info"
+                                    OnClick="OnUpdateInfoClick">Update</MudButton>
+                            </MudStack>
+                        </MudItem>
+
+                    </MudGrid>
+                </MudPaper>
+            </MudStack>
+        </div>
+    }
+    else
+    {
+        <MudContainer MaxWidth="MaxWidth.Medium">
+            <div class="d-flex flex-grow-1 justify-center ma-16 align-center" style="height: 70vh;">
+                <MudPaper Class="d-flex flex-grow-1 justify-center pa-16 ma-2 red lighten-2" Elevation="3" Height="50vh">
+                    <MudStack Class="d-flex flex-grow-1 justify-center">
+                        <div Class="flex-1 d-flex flex-grow-1 justify-center">
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Style="font-size: 15rem;" />
+                        </div>
+                        <MudText Typo="Typo.h6" Align="Align.Center">
+                            You do not have access to these settings
+                        </MudText>
+                        <MudText Typo="Typo.body1" Align="Align.Center">
+                            Please contact the owner of this project if you want to change any settings regarding the project.
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </div>
+        </MudContainer>
+    }
+}
+
+
+@code {
+    [Parameter]
+    public string ProjectId { get; set; }
+
+    [CascadingParameter]
+    public MainLayout? Ancestor { get; set; }
+    string Name { get; set; } = string.Empty;
+    string Description { get; set; } = string.Empty;
+    string OwnerEmail { get; set; } = string.Empty;
+    Project ProjectData { get; set; } = new();
+    List<User> UserList {get; set;} = new();
+    User LoggedUser {get; set;} = new();
+    async protected override Task OnInitializedAsync()
+    {
+        UpdateParentComponentProjectId();
+        ReloadResource();
+    }
+
+    async void ReloadResource()
+    {
+        ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
+        LoggedUser = await GetUserByCookie();
+        if (!(ProjectData is null))
+        {
+            Name = ProjectData.Name;
+            Description = ProjectData.Desc;
+            UserList = ProjectData.GetUserList();
+            foreach (var member in ProjectData.Members)
+            {
+                if (ProjectData.OwnerId == member.ID)
+                {
+                    OwnerEmail = member.Email;
+                }
+            }
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task<User> GetUserByCookie()
+    {
+        var queryBody = new { };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/user/get", queryBody);
+        var user = await response.Content.ReadFromJsonAsync<User>();
+        return user;
+    }
+
+    async Task<Project> GetProjectByUrl(int ProjectId)
+    {
+        var getProjectQueryBody = new { ProjectID = ProjectId };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/project/get-by-id", getProjectQueryBody);
+        var project = await response.Content.ReadFromJsonAsync<Project>();
+        return project;
+    }
+
+    async void OnUpdateInfoClick()
+    {
+        var queryBody = new
+        {
+
+        };
+
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+
+        var response = await client.PostAsJsonAsync("http://localhost:8000/user/update", queryBody);
+        OnUpdateInfoSuccess(response.StatusCode.ToString());
+    }
+
+    void OnUpdateInfoSuccess(string statusCode)
+    {
+        ShowSnackbarUpdateInfoStat(statusCode);
+        ReloadResource();
+    }
+
+    void ShowSnackbarUpdateInfoStat(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("Project info has been successfully updated!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to update project info!", Severity.Error);
+        }
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    void UpdateParentComponentProjectId()
+    {
+        Ancestor.ProjectId = ProjectId;
+        Ancestor?.NotifyChange();
+    }
+
+}

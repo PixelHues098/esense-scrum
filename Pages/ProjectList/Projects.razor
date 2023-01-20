@@ -1,0 +1,98 @@
+@page "/projects"
+@using System.Net.Http.Headers
+@layout CleanLayout
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavManager
+<PageTitle>Projects</PageTitle>
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudText Typo="Typo.h4" Class="mb-4 ml-6 mt-6">Projects</MudText>
+    <MudDivider Class="mb-6" />
+    @if (!isLoadingProject)
+    {
+        @if (JoinedProjects.Any())
+        {
+            <MudGrid Spacing="6" Justify="Justify.Center">
+                @foreach (var project in JoinedProjects)
+                {
+                    <MudItem xs="6" Class="">
+                        <MudCard>
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudChip Label="true">@project.Name.ToUpper()</MudChip>
+                                </CardHeaderContent>
+                                <CardHeaderActions>
+                                    @if (project.Type == "kanban")
+                                    {
+                                        <MudChip Icon="@Icons.Material.Filled.ViewKanban" Label="true" Color="Color.Warning">Kanban</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip Icon="@Icons.Material.Filled.DirectionsRun" Label="true" Color="Color.Info">Scrum</MudChip>
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" />
+                                </CardHeaderActions>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2">@project.Desc</MudText>
+                            </MudCardContent>
+                            <MudCardActions>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary"
+                        OnClick="@(() => OpenProject(project.ID.ToString()))">Open
+                                </MudButton>
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <NoProjectFound />
+        }
+    }
+    else
+    {
+        @for (int i = 0; i < 12; i++)
+        {
+            <MudSkeleton Animation="Animation.Wave" />
+            <br />
+            <br />
+        }
+    }
+
+</MudContainer>
+
+@code {
+    List<Models.Project>? JoinedProjects { get; set; } = new List<Project>();
+    bool isLoadingProject = true;
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        var jwt = await ReadCookies();
+        if (jwt != "")
+        {
+            JoinedProjects = await GetJoinedProjects(jwt.ToString());
+            isLoadingProject = false;
+        }
+    }
+
+    async Task<List<Models.Project>> GetJoinedProjects(string jwt)
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+
+        var response = await client.PostAsync("http://localhost:8000/project/user-joined", null);
+        var joinedProjects = await response.Content.ReadFromJsonAsync<Project[]>();
+
+        return new List<Project>(joinedProjects);
+    }
+
+    void OpenProject(string projectId)
+    {
+        NavManager.NavigateTo("/project/" + projectId + "/backlog");
+    }
+}

@@ -1,0 +1,64 @@
+@using System.Net.Http.Headers
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1">
+            Starting this sprint will override any ongoing sprint if there are any. Are you sure you want to proceed?
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectId { get; set; }
+    [Parameter] public Action ReloadResource { get; set; }
+    [Parameter] public int? SprintId { get; set; }
+    void Cancel() => MudDialog.Cancel();
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async void Submit()
+    {
+        var requestBody = new
+        {
+            SprintId = SprintId,
+            ProjectId = Int16.Parse(ProjectId)
+        };
+
+        var jwt = await ReadCookies();
+        var client = new HttpClient();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/sprint/start", requestBody);
+        ShowSnackbarQueryStatus(response.StatusCode.ToString());
+        AfterIssueCreate();
+    }
+
+    void ShowSnackbarQueryStatus(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("Sprint has started!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to start sprint!", Severity.Error);
+        }
+    }
+
+    async void AfterIssueCreate()
+    {
+        MudDialog.Close();
+        ReloadResource.Invoke();
+    }
+}

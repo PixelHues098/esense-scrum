@@ -1,0 +1,83 @@
+@inject IDialogService Dialog
+<MudText Align="Align.Left" Typo="Typo.h5" Class="mb-4  mt-6">Backlog</MudText>
+
+<div Class="d-flex flex-grow-1 gap-4">
+    <div>
+        <MudTextField Class="flex-grow-0" @bind-Value="Search" Label="Search" Variant="Variant.Outlined"
+            Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" AdornmentColor="Color.Dark" />
+    </div>
+
+    <div Class="d-flex justify-start align-content-center flex-wrap flex-grow-1">
+        <MudAvatarGroup Max=6 Spacing=3 MaxColor="Color.Primary">
+            @foreach (var user in UserList)
+            {
+                <MudAvatar Class=@(user.GetUserAvatarColor())> @user.FirstName[0] </MudAvatar>
+            }
+        </MudAvatarGroup>
+        <MudFab DisableElevation="true" StartIcon=@Icons.Filled.PersonAddAlt1 Size="Size.Small"
+            OnClick=@OpenAddUserToProjDialog />
+    </div>
+
+    <div Class="d-flex justify-end flex-wrap flex-grow-1 gap-6">
+        <div Class="d-flex flex-grow-0 align-self-center gap-2">
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Info"
+                OnClick=@OpenCreateIssueDialog Size="Size.Medium">Task
+            </MudButton>
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Tertiary"
+                OnClick=@OpenCreateSprintDialog Size="Size.Medium">Sprint
+            </MudButton>
+        </div>
+        <div Class="flex-grow-0 align-self-center">
+            <MudSelect Margin="Margin.Dense" Label="Sort by" T="string" Variant="Variant.Filled">
+                <MudSelectItem Value=@("Name") />
+                <MudSelectItem Value=@("Priority") />
+                <MudSelectItem Value=@("Date") />
+                <MudSelectItem Value=@("Asignee") />
+            </MudSelect>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<User> UserList { get; set; } = new();
+    [Parameter] public List<Sprint> SprintList { get; set; } = new();
+
+    [Parameter] public string ProjectId { get; set; } = string.Empty;
+
+    [Parameter] public Action? ReloadResource { get; set; }
+
+    [Parameter] public string Search { get; set; } = string.Empty;
+
+    public void OpenCreateSprintDialog()
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<CreateSprintForm>("Create Sprint", dialogParam, options);
+    }
+
+    public void OpenAddUserToProjDialog()
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<AddUserToProjectForm>("Add user to project", dialogParam, options);
+    }
+
+    public void OpenCreateIssueDialog()
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+        dialogParam.Add("SprintList", SprintList);
+        dialogParam.Add("UserList", UserList);
+        dialogParam.Add("AccessType", "create");
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<IssueForm>("Create Issue", dialogParam, options);
+    }
+}

@@ -1,0 +1,30 @@
+<MudDialog>
+    <DialogContent>
+        <MudChart ChartType="ChartType.Pie" InputData="@data" @bind-SelectedIndex="Index" InputLabels="@labels"
+            Width="300px" Height="300px" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    void Cancel() => MudDialog.Cancel();
+
+
+
+
+
+
+
+    private int Index = -1; //default value cannot be 0 -> first selectedindex is 0.
+    int dataSize = 4;
+    double[] data = { 77, 25, 20, 5 };
+    string[] labels = { "Uranium", "Plutonium", "Thorium", "Caesium", "Technetium", "Promethium",
+"Polonium", "Astatine", "Radon", "Francium", "Radium", "Actinium", "Protactinium",
+"Neptunium", "Americium", "Curium", "Berkelium", "Californium", "Einsteinium", "Mudblaznium" };
+}

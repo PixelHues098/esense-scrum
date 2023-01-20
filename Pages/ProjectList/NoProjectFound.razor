@@ -1,0 +1,49 @@
+@inject IDialogService Dialog
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-6">
+    <div class="d-flex flex-grow-1 justify-center py-6">
+        <MudText Typo="Typo.h4" Align="Align.Center">
+            No projects were found <br /> Create your own
+        </MudText>
+    </div>
+    <div class="d-flex flex-grow-1 gap-6 justify-center">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.h5">Kanban Template</MudText>
+                <MudText Typo="Typo.body2">Kanban (the Japanese word for "visual signal") is all about helping teams
+                    visualize their work, limit work currently in progress, and maximize efficiency. Use the Kanban
+                    template to increase planning flexibility, reduce bottlenecks and promote transparency
+                    throughout the development cycle.</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton OnClick="@(() => OpenCreateSprintDialog("kanban"))" Variant="Variant.Text"
+                    Color="Color.Primary">
+                    Create</MudButton>
+            </MudCardActions>
+        </MudCard>
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.h5">Scrum Template</MudText>
+                <MudText Typo="Typo.body2">The Scrum template helps teams work together using sprints to break down
+                    large, complex projects into bite-sized pieces of value. Encourage your team to learn through
+                    incremental delivery, self-organize while working on a problem, and regularly reflect on their
+                    wins and losses to continuously improve.</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton OnClick="@(() => OpenCreateSprintDialog("scrum"))" Variant="Variant.Text"
+                    Color="Color.Primary">
+                    Create</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </div>
+</MudContainer>
+
+@code {
+    public void OpenCreateSprintDialog(string projectType)
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectType", projectType);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<CreateProjectForm>("Create Sprint", dialogParam, options);
+    }
+}

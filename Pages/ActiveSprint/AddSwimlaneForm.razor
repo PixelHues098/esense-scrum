@@ -1,0 +1,62 @@
+@using System.Net.Http.Headers
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="SwimlaneName" Label="Name" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateSubmit">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectId { get; set; }
+    [Parameter] public Action ReloadResource { get; set; }
+    string SwimlaneName { get; set; }
+    void Cancel() => MudDialog.Cancel();
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async void CreateSubmit()
+    {
+        var requestBody = new
+        {
+            Name = SwimlaneName,
+            ProjectId = Int16.Parse(ProjectId)
+        };
+
+        var jwt = await ReadCookies();
+        var client = new HttpClient();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/swimlane/add", requestBody);
+        ShowSnackbarCreateStatus(response.StatusCode.ToString());
+        AfterIssueCreate();
+    }
+
+    void ShowSnackbarCreateStatus(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("New issue has beed added!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to add new issue!", Severity.Error);
+        }
+    }
+
+    async void AfterIssueCreate()
+    {
+        MudDialog.Close();
+        ReloadResource.Invoke();
+    }
+}

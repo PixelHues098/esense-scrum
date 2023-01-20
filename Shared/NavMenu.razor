@@ -1,0 +1,47 @@
+﻿@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+<MudNavMenu Rounded="true" Class="pa-2" Color="Color.Secondary">
+    <MudDivider Class= />
+    <MudNavGroup Class="pointer-events-auto mt-2" Title="Planning" @bind-Expanded=_isExpanded1>
+        <MudNavLink Icon="@Icons.Filled.Map" Href=@(ProjectUrl + "roadmap")>Roadmap</MudNavLink>
+        <MudNavLink Icon="@Icons.Filled.AutoStories" Href=@(ProjectUrl + "backlog")>Backlog</MudNavLink>
+        <MudNavLink Icon="@Icons.Filled.DoubleArrow" Href=@(ProjectUrl + "sprint")>Active Sprints</MudNavLink>
+        <MudNavLink Icon="@Icons.Filled.InsertDriveFile" Href=@(ProjectUrl + "reports")>Reports</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Class="mt-4" Title="Development" @bind-Expanded=_isExpanded2>
+        <MudNavLink Icon="@Icons.Filled.Update" Href=@(ProjectUrl + "history")>History</MudNavLink>
+        <MudNavLink Icon="@Icons.Filled.Outbox" Href=@(ProjectUrl + "releases")>Releases</MudNavLink>
+        <MudNavLink Icon="@Icons.Filled.Settings" Href=@(ProjectUrl + "settings")>Settings</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Class="mt-4" Title="User" @bind-Expanded=_isExpanded3>
+        <MudNavLink Icon="@Icons.Material.Filled.Person" Href=@(ProjectUrl + "user-info")>Info</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick=@OnLogoutClick>Logout</MudNavLink>
+    </MudNavGroup>
+</MudNavMenu>
+
+@code {
+    [Parameter]
+    public string ProjectId { get; set; }
+    public string ProjectUrl { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ProjectUrl = "/project/" + ProjectId + "/";
+    }
+    bool _isExpanded1 = true;
+
+    bool _isExpanded2 = true;
+    bool _isExpanded3 = true;
+
+
+    async ValueTask DeleteCookie()
+    {
+        await JsRuntime.InvokeAsync<object>("WriteCookie.WriteCookie", "jwt", "", DateTime.Now);
+    }
+
+    async void OnLogoutClick()
+    {
+        NavManager.NavigateTo("/login");
+        await DeleteCookie();
+    }
+}

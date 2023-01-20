@@ -1,0 +1,117 @@
+@page "/project/{ProjectId}/sprint"
+@using MyApplication.Models
+@using System.Net.Http.Headers
+@inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
+
+<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SwimlaneList=@SwimlaneList/>
+<MudDropContainer T="Issue" Items="@ActiveIssueList" ItemsSelector="@((item,dropzone) => item.SwimlaneId.ToString() == dropzone)"
+    ItemDropped="ItemUpdated" Class="d-flex flex-nowrap gap-4 overflow-auto pb-6" @ref="_container">
+    <ChildContent>
+        @foreach (var item in SwimlaneList)
+        {
+            <MudDropZone T="Issue" Identifier=@item.ID.ToString() Class=@("rounded-lg border mud-border-lines-default pa-6 mt-6 flex-none ") ItemDraggingClass="pa-1 rounded-lg red lighten-5" CanDropClass="mud-alert-text-success" ApplyDropClassesOnDragStarted="false" Style="width: 300px; min-height: 70vh;">
+                <MudText Typo.overlineClass="mb-1">@item.Name</MudText>
+            </MudDropZone>
+        }
+    </ChildContent>
+    <ItemRenderer>
+        <IssueCard Context=@context UserList=@UserList />
+    </ItemRenderer>
+</MudDropContainer>
+
+@code {
+    [Parameter]
+    public string ProjectId { get; set; }
+    [CascadingParameter]
+    public MainLayout? Ancestor { get; set; }
+    Project? ProjectData = new Project() { };
+    List<Swimlane> SwimlaneList = new();
+    List<Issue> ActiveIssueList = new();
+    List<User> UserList = new();
+    MudDropContainer<Issue> _container;
+
+    void ItemUpdated(MudItemDropInfo<Issue> dropItem)
+    {
+        if (dropItem.Item.SwimlaneId.ToString() != dropItem.DropzoneIdentifier)
+        {
+            MoveIssueToDiffSwimlane(dropItem.Item.ID, Int16.Parse(dropItem.DropzoneIdentifier));
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+            Snackbar.Add(dropItem.Item.ID + " has been moved to a different swimlane!", Severity.Success);
+        }
+    }
+
+    async void MoveIssueToDiffSwimlane(string? issueId, int? relocSwimlaneId)
+    {
+        var queryBody = new { IssueId = issueId, SwimlaneId = relocSwimlaneId };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        await client.PostAsJsonAsync("http://localhost:8000/issue/move-swimlane", queryBody);
+        ReloadResource();
+    }
+
+    private bool _isLoading = true;
+
+    public class KanBanSections
+    {
+        public string Name { get; init; } = "";
+        public string SectionColor { get; set; } = "";
+    }
+
+    private List<KanBanSections> _sections = new()
+    {
+        new KanBanSections() { Name = "To Do", SectionColor = "red lighten-5" },
+        new KanBanSections() { Name = "In Progress", SectionColor = "blue lighten-5" },
+        new KanBanSections() { Name = "Code Review", SectionColor = "purple lighten-5" },
+        new KanBanSections() { Name = "Testing", SectionColor = "teal lighten-5" },
+        new KanBanSections() { Name = "Done", SectionColor = "lime lighten-5" },
+        new KanBanSections() { Name = "Blocked", SectionColor = "green lighten-5" },
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        UpdateParentComponentProjectId();
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        
+        ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
+        SwimlaneList = ProjectData.GetOrderedSwimlaneList();
+        ActiveIssueList = ProjectData.GetActiveProjectIssues();
+        UserList = ProjectData.GetUserList();
+        ReloadResource();
+    }
+
+    async void ReloadResource()
+    {
+        ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
+        UserList = ProjectData.GetUserList();
+        SwimlaneList = ProjectData.GetOrderedSwimlaneList();
+        ActiveIssueList = ProjectData.GetActiveProjectIssues();
+        await InvokeAsync(StateHasChanged);
+        _container.Refresh();
+    }
+
+    async Task<Project> GetProjectByUrl(int ProjectId)
+    {
+        var getProjectQueryBody = new { ProjectID = ProjectId };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/project/get-by-id", getProjectQueryBody);
+        var project = await response.Content.ReadFromJsonAsync<Project>();
+        return project;
+    }
+
+    void UpdateParentComponentProjectId()
+    {
+        Ancestor.ProjectId = ProjectId;
+        Ancestor?.NotifyChange();
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+}
