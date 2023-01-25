@@ -1,13 +1,14 @@
 @page "/project/{ProjectId}/backlog"
 @using System.Net.Http.Headers
 @using MyApplication.Models
+@using System.Text.RegularExpressions
 @inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
 @inject IDialogService Dialog
 <PageTitle>Backlog</PageTitle>
 <FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SprintList=@SprintList
-    EpicList=@EpicList ProjectType=@ProjectType />
-<MudDropContainer T="Issue" Items=@ProjectData.Issues
+    EpicList=@EpicList ProjectType=@ProjectType SortIssueList=@SortIssueList SetSearchWord=@SetSearchWord />
+<MudDropContainer T="Issue" Items=@(IssueList.ToArray())
     ItemsSelector="@((item,dropzone) => item.SprintId.ToString() == dropzone)" ItemDropped="ItemUpdated"
     @ref="_container">
     <ChildContent>
@@ -41,8 +42,11 @@
         }
     </ChildContent>
     <ItemRenderer>
-        <IssueItem Context=@context ProjectId=@ProjectId ReloadResource=@ReloadResource UserList=@UserList
+        @if (context.Title.Contains(Search))
+        {
+            <IssueItem Context=@context ProjectId=@ProjectId ReloadResource=@ReloadResource UserList=@UserList
             SprintList=@SprintList EpicList=@EpicList />
+        }
     </ItemRenderer>
 </MudDropContainer>
 
@@ -53,11 +57,15 @@
     [CascadingParameter]
     public MainLayout? Ancestor { get; set; }
     Project? ProjectData = new Project() { };
+    List<Issue> IssueList { get; set; } = new();
     List<Sprint> SprintList = new();
     List<User> UserList = new();
     List<Epic> EpicList = new();
     string ProjectType = "";
+    string SortType = "";
     private MudDropContainer<Issue> _container;
+    public string Search { get; set; } = "";
+
 
     void ItemUpdated(MudItemDropInfo<Issue> dropItem)
     {
@@ -83,6 +91,7 @@
         SprintList = ProjectData.GetSprintList(false);
         EpicList = ProjectData.GetEpicList();
         ProjectType = ProjectData.Type;
+        SortIssueList("date-desc");
     }
 
     async void ReloadResource()
@@ -92,6 +101,7 @@
         SprintList = ProjectData.GetSprintList(false);
         EpicList = ProjectData.GetEpicList();
         ProjectType = ProjectData.Type;
+        SortIssueList(SortType);
         await InvokeAsync(StateHasChanged);
         _container.Refresh();
     }
@@ -134,5 +144,41 @@
 
         var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         Dialog.Show<StartSprintForm>("", dialogParam, options);
+    }
+
+    async void SortIssueList(string sortType)
+    {
+        SortType = sortType;
+        switch (sortType)
+        {
+            case "date-desc":
+            case "id-desc":
+                IssueList = ProjectData.GetIssueList(false);
+                break;
+            case "name-desc":
+                IssueList = ProjectData.GetTitleSortedIssueList(false);
+                break;
+            case "assignee-desc":
+                IssueList = ProjectData.GetAssigneeSortedIssueList(false);
+                break;
+            case "priority-desc":
+                IssueList = ProjectData.GetPrioritySortedIssueList(false);
+                break;
+            case "epic-desc":
+                IssueList = ProjectData.GetEpicSortedIssueList(false);
+                break;
+            default:
+                IssueList = ProjectData.GetIssueList(false);
+                break;
+        }
+        await InvokeAsync(StateHasChanged);
+        _container.Refresh();
+    }
+
+    async void SetSearchWord(string searchWord)
+    {
+        Search = searchWord;
+        await InvokeAsync(StateHasChanged);
+        _container.Refresh();
     }
 }

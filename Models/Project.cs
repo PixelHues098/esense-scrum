@@ -42,6 +42,235 @@ namespace MyApplication.Models
             }
         }
 
+        public List<Issue> GetIssueList(bool isActive)
+        {
+            try
+            {
+                List<KeyValuePair<int, int>> issueList = new();
+                Dictionary<int, Issue> issueDict = new();
+                List<Issue> sortedIssueList = new();
+                foreach (var issue in this.Issues)
+                {
+                    int issueId = Convert.ToInt32(issue.ID.Split("-")[1]);
+                    if (isActive)
+                    {
+                        if (issue.SprintId == this.ActiveSprint)
+                        {
+                            issueList.Add(new KeyValuePair<int, int>(issueId, issueId));
+                            issueDict.Add(issueId, issue);
+                        }
+                    }
+                    else
+                    {
+                        issueList.Add(new KeyValuePair<int, int>(issueId, issueId));
+                        issueDict.Add(issueId, issue);
+                    }
+                }
+
+                var issueListArr = issueList.ToArray();
+                sortPair(issueListArr);
+
+                foreach (var issue in issueListArr)
+                {
+                    sortedIssueList.Add(issueDict[issue.Key]);
+                }
+
+                return sortedIssueList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Issue>();
+            }
+        }
+
+        public List<Issue> GetPrioritySortedIssueList(bool isActive)
+        {
+            try
+            {
+                List<KeyValuePair<int, int>> issueList = new();
+                Dictionary<int, Issue> issueDict = new();
+                List<Issue> sortedIssueList = new();
+                foreach (var issue in this.Issues)
+                {
+                    int issueId = Convert.ToInt32(issue.ID.Split("-")[1]);
+                    int priorityVal = 0;
+                    switch (issue.Priority)
+                    {
+                        case "very low":
+                            priorityVal = 1;
+                            break;
+                        case "low":
+                            priorityVal = 2;
+                            break;
+                        case "neutral":
+                            priorityVal = 3;
+                            break;
+                        case "high":
+                            priorityVal = 4;
+                            break;
+                        case "very high":
+                            priorityVal = 5;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    if (isActive)
+                    {
+                        if (issue.SprintId == this.ActiveSprint)
+                        {
+                            issueList.Add(new KeyValuePair<int, int>(issueId, priorityVal));
+                            issueDict.Add(issueId, issue);
+                        }
+                    }
+                    else
+                    {
+                        issueList.Add(new KeyValuePair<int, int>(issueId, priorityVal));
+                        issueDict.Add(issueId, issue);
+                    }
+                }
+
+                var issueListArr = issueList.ToArray();
+                sortPair(issueListArr);
+
+                foreach (var issue in issueListArr)
+                {
+                    sortedIssueList.Add(issueDict[issue.Key]);
+                }
+
+                return sortedIssueList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Issue>();
+            }
+        }
+
+        public List<Issue> GetTitleSortedIssueList(bool isActive)
+        {
+            try
+            {
+                List<KeyValuePair<int, int>> issueList = new();
+                Dictionary<int, Issue> issueDict = new();
+                List<Issue> sortedIssueList = new();
+                foreach (var issue in this.Issues)
+                {
+                    int issueId = Convert.ToInt32(issue.ID.Split("-")[1]);
+
+                    if (isActive)
+                    {
+                        if (issue.SprintId == this.ActiveSprint)
+                        {
+                            issueList.Add(new KeyValuePair<int, int>(issueId, Convert.ToInt32(issue.Title.ToCharArray()[0])));
+                            issueDict.Add(issueId, issue);
+                        }
+                    }
+                    else
+                    {
+                        issueList.Add(new KeyValuePair<int, int>(issueId, Convert.ToInt32(issue.Title.ToCharArray()[0])));
+                        issueDict.Add(issueId, issue);
+                    }
+                }
+
+                var issueListArr = issueList.ToArray();
+                sortPair(issueListArr);
+
+                foreach (var issue in issueListArr)
+                {
+                    sortedIssueList.Add(issueDict[issue.Key]);
+                }
+
+                return sortedIssueList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Issue>();
+            }
+        }
+
+        public List<Issue> GetAssigneeSortedIssueList(bool isActive)
+        {
+            try
+            {
+                List<KeyValuePair<int, int>> issueList = new();
+                Dictionary<int, Issue> issueDict = new();
+                List<Issue> sortedIssueList = new();
+                foreach (var issue in this.Issues)
+                {
+                    int issueId = Convert.ToInt32(issue.ID.Split("-")[1]);
+                    if (isActive)
+                    {
+                        if (issue.SprintId == this.ActiveSprint)
+                        {
+                            issueList.Add(new KeyValuePair<int, int>(issueId, Convert.ToInt32(issue.AssigneeId)));
+                            issueDict.Add(issueId, issue);
+                        }
+                    }
+                    else
+                    {
+                        issueList.Add(new KeyValuePair<int, int>(issueId, Convert.ToInt32(issue.AssigneeId)));
+                        issueDict.Add(issueId, issue);
+                    }
+
+                }
+
+                var issueListArr = issueList.ToArray();
+                sortPair(issueListArr);
+
+                foreach (var issue in issueListArr)
+                {
+                    sortedIssueList.Add(issueDict[issue.Key]);
+                }
+
+                return sortedIssueList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Issue>();
+            }
+        }
+
+        public List<Issue> GetEpicSortedIssueList(bool isActive)
+        {
+            try
+            {
+                List<KeyValuePair<int, int>> issueList = new();
+                Dictionary<int, Issue> issueDict = new();
+                List<Issue> sortedIssueList = new();
+                foreach (var issue in this.Issues)
+                {
+                    int issueId = Convert.ToInt32(issue.ID.Split("-")[1]);
+                    if (isActive)
+                    {
+                        if (issue.SprintId == this.ActiveSprint)
+                        {
+                            issueList.Add(new KeyValuePair<int, int>(issueId, Convert.ToInt32(issue.EpicId)));
+                            issueDict.Add(issueId, issue);
+                        }
+                    }
+                    else
+                    {
+                        issueList.Add(new KeyValuePair<int, int>(issueId, Convert.ToInt32(issue.EpicId)));
+                        issueDict.Add(issueId, issue);
+                    }
+                }
+
+                var issueListArr = issueList.ToArray();
+                sortPair(issueListArr);
+
+                foreach (var issue in issueListArr)
+                {
+                    sortedIssueList.Add(issueDict[issue.Key]);
+                }
+
+                return sortedIssueList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Issue>();
+            }
+        }
+
         public List<Swimlane> GetOrderedSwimlaneList()
         {
             try
@@ -128,6 +357,35 @@ namespace MyApplication.Models
             }
         }
 
+        public List<Epic> GetDateSortedEpicList()
+        {
+            try
+            {
+                List<KeyValuePair<int, int>> epicList = new();
+                Dictionary<int, Epic> epicDict = new();
+                List<Epic> sortedEpicList = new();
+                foreach (var epic in this.Epics)
+                {
+                    epicList.Add(new KeyValuePair<int, int>(Convert.ToInt32(epic.ID), Convert.ToInt32((DateTime.Parse(epic.StartDate) - DateTime.MinValue).TotalDays)));
+                    epicDict.Add(Convert.ToInt32(epic.ID), epic);
+                }
+
+                var epicListArr = epicList.ToArray();
+                sortPair(epicListArr);
+
+                foreach (var epic in epicListArr)
+                {
+                    sortedEpicList.Add(epicDict[epic.Key]);
+                }
+
+                return sortedEpicList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Epic>();
+            }
+        }
+
         public DateTime GetEarliestEpic()
         {
             DateTime earliestEpic = DateTime.MaxValue;
@@ -140,27 +398,6 @@ namespace MyApplication.Models
             }
 
             return earliestEpic;
-        }
-
-        public List<Issue> GetActiveProjectIssues()
-        {
-            try
-            {
-                List<Issue> issueList = new List<Issue>();
-                foreach (var issue in this.Issues)
-                {
-                    if (issue.SprintId == this.ActiveSprint)
-                    {
-                        issueList.Add(issue);
-                    }
-                }
-
-                return issueList;
-            }
-            catch (System.Exception)
-            {
-                return new List<Issue>();
-            }
         }
     }
 }

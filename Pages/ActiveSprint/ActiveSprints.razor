@@ -4,8 +4,8 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
 
-<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SwimlaneList=@SwimlaneList ActiveSprintId=@ActiveSprintId ProjectType=@ProjectType/>
-<MudDropContainer T="Issue" Items="@ActiveIssueList" ItemsSelector="@((item,dropzone) => item.SwimlaneId.ToString() == dropzone)"
+<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SwimlaneList=@SwimlaneList ActiveSprintId=@ActiveSprintId ProjectType=@ProjectType SortIssueList=@SortIssueList SetSearchWord=@SetSearchWord />
+<MudDropContainer T="Issue" Items="@IssueList" ItemsSelector="@((item,dropzone) => item.SwimlaneId.ToString() == dropzone)"
     ItemDropped="ItemUpdated" Class="d-flex flex-nowrap gap-4 overflow-auto pb-6" @ref="_container">
     <ChildContent>
         @foreach (var item in SwimlaneList)
@@ -16,7 +16,10 @@
         }
     </ChildContent>
     <ItemRenderer>
-        <IssueCard Context=@context UserList=@UserList />
+        @if (context.Title.Contains(Search))
+        {
+            <IssueCard Context=@context UserList=@UserList />
+        }
     </ItemRenderer>
 </MudDropContainer>
 
@@ -27,10 +30,12 @@
     public MainLayout? Ancestor { get; set; }
     Project? ProjectData = new Project() { };
     List<Swimlane> SwimlaneList = new();
-    List<Issue> ActiveIssueList = new();
+    List<Issue> IssueList = new();
     int? ActiveSprintId = 0;
     List<User> UserList = new();
     string ProjectType = "";
+    string SortType = "";
+    public string Search { get; set; } = "";
     MudDropContainer<Issue> _container;
 
     void ItemUpdated(MudItemDropInfo<Issue> dropItem)
@@ -69,9 +74,9 @@
         
         ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
         SwimlaneList = ProjectData.GetOrderedSwimlaneList();
-        ActiveIssueList = ProjectData.GetActiveProjectIssues();
         UserList = ProjectData.GetUserList();
         ProjectType = ProjectData.Type;
+        SortIssueList(SortType);
         ReloadResource();
     }
 
@@ -80,9 +85,9 @@
         ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
         UserList = ProjectData.GetUserList();
         SwimlaneList = ProjectData.GetOrderedSwimlaneList();
-        ActiveIssueList = ProjectData.GetActiveProjectIssues();
         ActiveSprintId = ProjectData.ActiveSprint;
         ProjectType = ProjectData.Type;
+        SortIssueList(SortType);
 
         await InvokeAsync(StateHasChanged);
         _container.Refresh();
@@ -109,5 +114,41 @@
     async ValueTask<string> ReadCookies()
     {
         return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async void SortIssueList(string sortType)
+    {
+        SortType = sortType;
+        switch (sortType)
+        {
+            case "date-desc":
+            case "id-desc":
+                IssueList = ProjectData.GetIssueList(true);
+                break;
+            case "name-desc":
+                IssueList = ProjectData.GetTitleSortedIssueList(true);
+                break;
+            case "assignee-desc":
+                IssueList = ProjectData.GetAssigneeSortedIssueList(true);
+                break;
+            case "priority-desc":
+                IssueList = ProjectData.GetPrioritySortedIssueList(true);
+                break;
+            case "epic-desc":
+                IssueList = ProjectData.GetEpicSortedIssueList(true);
+                break;
+            default:
+                IssueList = ProjectData.GetIssueList(true);
+                break;
+        }
+        await InvokeAsync(StateHasChanged);
+        _container.Refresh();
+    }
+
+    async void SetSearchWord(string searchWord)
+    {
+        Search = searchWord;
+        await InvokeAsync(StateHasChanged);
+        _container.Refresh();
     }
 }

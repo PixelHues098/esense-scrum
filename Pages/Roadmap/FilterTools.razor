@@ -10,9 +10,9 @@
         </div>
         <div Class="flex-grow-0 align-self-center">
             <MudSelect Margin="Margin.Dense" Label="Sort by" T="string" Variant="Variant.Filled"
-                TextChanged=@OnValueChange>
+                TextChanged=@OnSortValueChange>
                 <MudSelectItem Value=@("Name") />
-                <MudSelectItem Value=@("Date") />
+                <MudSelectItem Value=@("Created Date") />
                 <MudSelectItem Value=@("Start Date") />
             </MudSelect>
         </div>
@@ -36,15 +36,18 @@
         Dialog.Show<AddEpicForm>("Create Epic", dialogParam, options);
     }
 
-    async void OnValueChange(string sortName)
+    async void OnSortValueChange(string sortName)
     {
         switch (sortName)
         {
             case "Name":
                 await SortEpicList.InvokeAsync("name-desc");
                 break;
-            case "Date":
+            case "Created Date":
                 await SortEpicList.InvokeAsync("date-desc");
+                break;
+            case "Start Date":
+                await SortEpicList.InvokeAsync("startdate-desc");
                 break;
             default:
                 break;

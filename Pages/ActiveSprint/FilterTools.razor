@@ -4,7 +4,8 @@
 <div Class="d-flex flex-grow-1 gap-4">
     <div>
         <MudTextField Class="flex-grow-0" @bind-Value="Search" Label="Search" Variant="Variant.Outlined"
-            Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" AdornmentColor="Color.Dark" />
+            Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" AdornmentColor="Color.Dark"
+            DebounceInterval="700" OnDebounceIntervalElapsed=@OnSearchInput />
     </div>
 
     <div Class="d-flex justify-start align-content-center flex-wrap flex-grow-1">
@@ -34,11 +35,14 @@
             }
         </div>
         <div Class="flex-grow-0 align-self-center">
-            <MudSelect Margin="Margin.Dense" Label="Sort by" T="string" Variant="Variant.Filled">
+            <MudSelect Margin="Margin.Dense" Label="Sort by" T="string" Variant="Variant.Filled"
+                TextChanged=@OnSortValueChange>
+                <MudSelectItem Value=@("ID") />
                 <MudSelectItem Value=@("Name") />
                 <MudSelectItem Value=@("Priority") />
-                <MudSelectItem Value=@("Date") />
-                <MudSelectItem Value=@("Asignee") />
+                <MudSelectItem Value=@("Date Created") />
+                <MudSelectItem Value=@("Assignee") />
+                <MudSelectItem Value=@("Epic") />
             </MudSelect>
         </div>
     </div>
@@ -48,14 +52,41 @@
     [Parameter] public List<User> UserList { get; set; } = new();
     [Parameter] public List<Sprint> SprintList { get; set; } = new();
     [Parameter] public List<Swimlane> SwimlaneList { get; set; } = new();
+    [Parameter] public EventCallback<string> SortIssueList { get; set; }
 
     [Parameter] public string ProjectId { get; set; } = string.Empty;
     [Parameter] public string ProjectType { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SetSearchWord { get; set; }
 
     [Parameter] public Action? ReloadResource { get; set; }
 
     [Parameter] public string Search { get; set; } = string.Empty;
     [Parameter] public int? ActiveSprintId { get; set; } = 0;
+
+    async void OnSortValueChange(string sortName)
+    {
+        switch (sortName)
+        {
+            case "ID":
+            case "Date Created":
+                await SortIssueList.InvokeAsync("id-desc");
+                break;
+            case "Name":
+                await SortIssueList.InvokeAsync("name-desc");
+                break;
+            case "Priority":
+                await SortIssueList.InvokeAsync("priority-desc");
+                break;
+            case "Assignee":
+                await SortIssueList.InvokeAsync("assignee-desc");
+                break;
+            case "Epic":
+                await SortIssueList.InvokeAsync("epic-desc");
+                break;
+            default:
+                break;
+        }
+    }
 
     public void OpenCreateSwimlaneDialog()
     {
@@ -97,5 +128,10 @@
 
         var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         Dialog.Show<ReorderForm>("Reorder Swimlane", dialogParam, options);
+    }
+
+    void OnSearchInput(string searchWord)
+    {
+        SetSearchWord.InvokeAsync(searchWord);
     }
 }

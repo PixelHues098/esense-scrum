@@ -47,6 +47,7 @@
     const int pixelsPerDay = 20;
     int monthCount = 0;
     public DateTime earliestEpic { get; set; } = DateTime.Now;
+    string SortType = "date-desc";
 
     async protected override Task OnInitializedAsync()
     {
@@ -75,7 +76,7 @@
     {
         ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
         earliestEpic = ProjectData.GetEarliestEpic();
-        SortEpicList("name-desc");
+        SortEpicList(SortType);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -95,9 +96,14 @@
             case "name-desc":
                 EpicList = ProjectData.GetNameSortedEpicList();
                 break;
+            case "startdate-desc":
+                EpicList = ProjectData.GetDateSortedEpicList();
+                break;
             default:
                 EpicList = ProjectData.GetEpicList();
                 break;
         }
+
+        SortType = sortType;
     }
 }

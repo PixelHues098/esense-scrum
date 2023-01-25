@@ -8,8 +8,9 @@
         }
         else
         {
-            <MudAvatar Class="blue lighten-3" Variant="Variant.Filled" Size="Size.Small">
-                @GetAssigneeNameById(Context.AssigneeId).ToUpper()[0]
+            <MudAvatar Class=@(GetAssigneeById(Context.AssigneeId).GetUserAvatarColor()) Variant="Variant.Filled"
+            Size="Size.Small">
+                @GetAssigneeById(Context.AssigneeId).Username.ToUpper()[0]
             </MudAvatar>
         }
         <MudIcon Icon=@(Context.GetIssueIconByType()) Class=@("flex-none d-flex " + Context.GetIssueColorByType()) />
@@ -24,15 +25,15 @@
     [Parameter] public Issue Context { get; set; } = new();
     [Parameter] public List<User> UserList { get; set; } = new();
 
-    public string GetAssigneeNameById(int? assigneeId)
+    public User GetAssigneeById(int? assigneeId)
     {
         foreach (var user in UserList)
         {
             if (user.ID == assigneeId)
             {
-                return user.Username;
+                return user;
             }
         }
-        return "?";
+        return new User();
     }
 }
