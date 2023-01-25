@@ -11,7 +11,7 @@
         <MudAvatarGroup Max=6 Spacing=3 MaxColor="Color.Primary">
             @foreach (var user in UserList)
             {
-                <MudAvatar Class=@(user.GetUserAvatarColor())> @user.FirstName[0] </MudAvatar>
+                <MudAvatar Class=@(user.GetUserAvatarColor())> @user.Username[0] </MudAvatar>
             }
         </MudAvatarGroup>
         <MudFab DisableElevation="true" StartIcon=@Icons.Filled.PersonAddAlt1 Size="Size.Small"
@@ -26,9 +26,12 @@
             <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Tertiary"
                 OnClick=@OpenCreateSwimlaneDialog Size="Size.Medium">Swimlane
             </MudButton>
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Done" Color="Color.Success"
-                OnClick=@OpenCreateSwimlaneDialog Size="Size.Medium">Complete
-            </MudButton>
+            @if (ProjectType != "kanban")
+            {
+                <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Done" Color="Color.Success"
+                OnClick=@OpenCompleteSprint Size="Size.Medium">Complete
+                </MudButton>
+            }
         </div>
         <div Class="flex-grow-0 align-self-center">
             <MudSelect Margin="Margin.Dense" Label="Sort by" T="string" Variant="Variant.Filled">
@@ -47,10 +50,12 @@
     [Parameter] public List<Swimlane> SwimlaneList { get; set; } = new();
 
     [Parameter] public string ProjectId { get; set; } = string.Empty;
+    [Parameter] public string ProjectType { get; set; } = string.Empty;
 
     [Parameter] public Action? ReloadResource { get; set; }
 
     [Parameter] public string Search { get; set; } = string.Empty;
+    [Parameter] public int? ActiveSprintId { get; set; } = 0;
 
     public void OpenCreateSwimlaneDialog()
     {
@@ -70,6 +75,17 @@
 
         var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         Dialog.Show<AddUserToProjectForm>("Add user to project", dialogParam, options);
+    }
+
+    public void OpenCompleteSprint()
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("ActiveSprintId", ActiveSprintId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<CompleteSprintForm>("End Sprint", dialogParam, options);
     }
 
     public void OpenReorderDialog()

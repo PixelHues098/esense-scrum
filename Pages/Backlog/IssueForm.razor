@@ -24,6 +24,14 @@
                         <MudSelectItem Value=@(user.Username) />
                     }
                 </MudSelect>
+                <MudSelect T="string" Label="Epic" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined"
+                    @bind-Value=@EpicName Disabled=@isShow>
+                    <MudSelectItem Value=@("None") />
+                    @foreach (var epic in EpicList)
+                    {
+                        <MudSelectItem Value=@epic.Name />
+                    }
+                </MudSelect>
             </div>
             <div class="d-flex flex-grow-1 gap-2">
                 <MudSelect T="string" Label="Priority" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined"
@@ -71,12 +79,14 @@
     [Parameter] public Action ReloadResource { get; set; }
     [Parameter] public List<Sprint> SprintList { get; set; }
     [Parameter] public List<User> UserList { get; set; }
+    [Parameter] public List<Epic> EpicList { get; set; }
     [Parameter] public string AccessType { get; set; }
     [Parameter] public Issue? Context { get; set; }
     string? Title { get; set; } = string.Empty;
     string? Desc { get; set; } = string.Empty;
     string? Type { get; set; } = string.Empty;
     string? SprintName { get; set; } = string.Empty;
+    string? EpicName { get; set; } = string.Empty;
     string? AssigneeUsername { get; set; } = string.Empty;
     string? Priority { get; set; } = string.Empty;
     bool isShow { get; set; } = false;
@@ -94,6 +104,7 @@
             Type = GetTypeInputVal(Context.Type);
             AssigneeUsername = GetUserInputVal(Context.AssigneeId, UserList);
             SprintName = GetSprintInputVal(Context.SprintId, SprintList);
+            EpicName = GetEpicInputVal(Context.EpicId, EpicList);
         }
 
         if (AccessType == "show")
@@ -117,6 +128,7 @@
             ProjectId = Int16.Parse(ProjectId),
             AssigneeId = GetUserQueryVal(AssigneeUsername, UserList),
             SprintId = GetSprintQueryVal(SprintName, SprintList),
+            EpicId = GetEpicQueryVal(EpicName, EpicList),
             Points = Points,
             Priority = GetPriorityQueryVal(Priority)
         };
@@ -141,6 +153,7 @@
             ProjectId = Int16.Parse(ProjectId),
             AssigneeId = GetUserQueryVal(AssigneeUsername, UserList),
             SprintId = GetSprintQueryVal(SprintName, SprintList),
+            EpicId = GetEpicQueryVal(EpicName, EpicList),
             Points = Points,
             Priority = GetPriorityQueryVal(Priority)
         };
@@ -326,6 +339,34 @@
             }
         }
         return "Backlog";
+    }
+
+    int? GetEpicQueryVal(string epicName, List<Epic> epicList)
+    {
+        foreach (var epic in epicList)
+        {
+            if (epic.Name == epicName)
+            {
+                return epic.ID;
+            }
+        }
+
+        return 0;
+    }
+
+    string GetEpicInputVal(int? epicId, List<Epic> epicList)
+    {
+        if (!(epicId is null))
+        {
+            foreach (var epic in epicList)
+            {
+                if (epicId == epic.ID)
+                {
+                    return epic.Name;
+                }
+            }
+        }
+        return "None";
     }
 
     async void AfterIssueCreate()

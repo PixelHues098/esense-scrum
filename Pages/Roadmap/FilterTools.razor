@@ -1,3 +1,53 @@
-@* TODO: Add filter functionality here *@
-<MudText Typo="Typo.h5" Class="mb-4 ml-6 mt-6">Roadmap</MudText>
-<MudDivider Class="mb-6" />
+@inject IDialogService Dialog
+
+<div Class="d-flex flex-grow-1 gap-4">
+    <MudText Align="Align.Left" Typo="Typo.h5" Class="mb-4  mt-6">Roadmap</MudText>
+    <div Class="d-flex justify-end flex-wrap flex-grow-1 gap-6">
+        <div Class="d-flex flex-grow-0 align-self-center gap-2">
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Info"
+                Size="Size.Medium" OnClick=OpenAddEpicDialog>Epic
+            </MudButton>
+        </div>
+        <div Class="flex-grow-0 align-self-center">
+            <MudSelect Margin="Margin.Dense" Label="Sort by" T="string" Variant="Variant.Filled"
+                TextChanged=@OnValueChange>
+                <MudSelectItem Value=@("Name") />
+                <MudSelectItem Value=@("Date") />
+                <MudSelectItem Value=@("Start Date") />
+            </MudSelect>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ProjectId { get; set; }
+    [Parameter] public Action? ReloadResource { get; set; }
+    [Parameter] public EventCallback<string> SortEpicList { get; set; }
+    Project? ProjectData = new Project() { };
+    public string SortType = "date-desc";
+
+    public void OpenAddEpicDialog()
+    {
+        var dialogParam = new DialogParameters() { };
+        dialogParam.Add("ProjectId", ProjectId);
+        dialogParam.Add("ReloadResource", ReloadResource);
+
+        var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        Dialog.Show<AddEpicForm>("Create Epic", dialogParam, options);
+    }
+
+    async void OnValueChange(string sortName)
+    {
+        switch (sortName)
+        {
+            case "Name":
+                await SortEpicList.InvokeAsync("name-desc");
+                break;
+            case "Date":
+                await SortEpicList.InvokeAsync("date-desc");
+                break;
+            default:
+                break;
+        }
+    }
+}

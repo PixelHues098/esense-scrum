@@ -1,21 +1,31 @@
-<MudPaper Width=@(FullRangeWidth + "px") Height="50px" Outlined="true"
-Class="rounded-tl-xl rounded-br-xl" Style=@("padding: 8px; padding-left: " + ((Epic.DaysFromStartDate
-* PixelsPerDay) + 10).ToString() +"px;")>
-    <MudTooltip Text=@(Epic.StartDate.ToString("MM/dd/yyyy") + " - " +
-    Epic.EndDate.ToString("MM/dd/yyyy")) Arrow="true" Placement="Placement.Top">
-        <MudPaper Width=@((Epic.Duration * PixelsPerDay).ToString() + "px") Height="32px"
-        Class=@("rounded-tl-xl rounded-br-xl " + Epic.Color ) />
+<MudPaper Width=@(FullRangeWidth + "px") Height="50px" Outlined="true" Class="rounded-tl-xl rounded-br-xl"
+    Style=@("padding: 8px; padding-left: " + ((DaysFromEarliest * PixelsPerDay) + 10).ToString() +"px;")>
+
+    <MudTooltip Text=@(Context.StartDate.Split("T")[0] + " to " + Context.EndDate.Split("T")[0]) Arrow="true"
+        Placement="Placement.Top">
+        <MudPaper Width=@((Context.GetEpicDuration() * PixelsPerDay).ToString() + "px") Height="32px"
+            Class=@("rounded-tl-xl rounded-br-xl " + Context.GetEpicColor() ) />
     </MudTooltip>
 </MudPaper>
 
-@code{
+@code {
     [Parameter] public int DaysInFourYears { get; set; }
     [Parameter] public int PixelsPerDay { get; set; }
-    [Parameter] public RoadmapGraph Epic { get; set; }
+    [Parameter] public Epic Context { get; set; }
+    [Parameter] public DateTime EarliestEpic { get; set; }
     string FullRangeWidth = "0";
+    int DaysFromEarliest = 0;
 
     async protected override Task OnInitializedAsync()
     {
         FullRangeWidth = (DaysInFourYears * PixelsPerDay).ToString();
+        DaysFromEarliest = Convert.ToInt32(DateTime.Parse(Context.StartDate).Subtract(EarliestEpic).TotalDays);
+    }
+
+    async protected override Task OnParametersSetAsync()
+    {
+        FullRangeWidth = (DaysInFourYears * PixelsPerDay).ToString();
+        DaysFromEarliest = Convert.ToInt32(DateTime.Parse(Context.StartDate).Subtract(EarliestEpic).TotalDays);
+        DaysFromEarliest += Convert.ToInt32(EarliestEpic.ToString().Split("/")[1]);
     }
 }

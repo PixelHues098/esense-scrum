@@ -3,12 +3,6 @@
         <div>
             <MudChart ChartType="ChartType.Line" ChartSeries="@Series" XAxisLabels="@XAxisLabels" Width="100%"
                 Height="350" ChartOptions="options"></MudChart>
-            @* <MudButton @onclick="RandomizeData">Randomize Data</MudButton>
-                <MudMenu Label="Interpolation Algorithm" FullWidth="true">
-                <MudMenuItem OnClick="() => OnClickMenu(InterpolationOption.NaturalSpline)">Natural Spline</MudMenuItem>
-                <MudMenuItem OnClick="() => OnClickMenu(InterpolationOption.EndSlope)">End Slope</MudMenuItem>
-                <MudMenuItem OnClick="() => OnClickMenu(InterpolationOption.Periodic)">Periodic</MudMenuItem>
-                </MudMenu> *@
         </div>
     </DialogContent>
     <DialogActions>
@@ -19,6 +13,7 @@
 
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
 
     void Submit() => MudDialog.Close(DialogResult.Ok(true));
     void Cancel() => MudDialog.Cancel();

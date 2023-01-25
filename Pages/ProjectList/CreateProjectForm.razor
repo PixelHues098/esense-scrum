@@ -45,6 +45,7 @@
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; }
     [Parameter] public string ProjectType { get; set; }
+    [Parameter] public Action ReloadResource { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Desc { get; set; } = string.Empty;
     public string Key { get; set; } = string.Empty;
@@ -71,15 +72,15 @@
         var client = new HttpClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", cookieVal.ToString());
         var response = await client.PostAsJsonAsync("http://localhost:8000/project/add", projectDetails);
-        RedirectOnCreate(response.StatusCode);
+        OnProjectCreate(response.StatusCode);
     }
 
-    void RedirectOnCreate(System.Net.HttpStatusCode code)
+    void OnProjectCreate(System.Net.HttpStatusCode code)
     {
         Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
         if (code.ToString() == "OK")
         {
-            NavManager.NavigateTo("/projects");
+            ReloadResource.Invoke();
             Snackbar.Add("Project created successfully!", Severity.Success);
         }
         else

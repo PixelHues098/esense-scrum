@@ -1,0 +1,68 @@
+@using System.Net.Http.Headers
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="Name" Label="Epic Name" Variant="Variant.Outlined" />
+        <div Class="my-6">
+            <MudDateRangePicker Label="Epic Schedule" @bind-DateRange="ScheduleDateRange" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ProjectId { get; set; }
+    [Parameter] public Action ReloadResource { get; set; }
+    string Name { get; set; } = string.Empty;
+    DateRange ScheduleDateRange = new DateRange(DateTime.Now.Date, DateTime.Now.AddDays(11).Date);
+    void Cancel() => MudDialog.Cancel();
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async void Submit()
+    {
+        var queryBody = new
+        {
+            Name = Name,
+            StartDate = ScheduleDateRange.Start,
+            EndDate = ScheduleDateRange.End,
+            ProjectId = Int16.Parse(ProjectId)
+        };
+
+        var cookieVal = await ReadCookies();
+        var client = new HttpClient();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", cookieVal.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/epic/add", queryBody);
+        ShowSnackbarQueryStatus(response.StatusCode.ToString());
+        AfterEpicCreate();
+    }
+
+    void ShowSnackbarQueryStatus(string statusCode)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomLeft;
+        if (statusCode == "OK")
+        {
+            Snackbar.Add("New epic has beed added!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Failed to add new epic!", Severity.Error);
+        }
+    }
+
+    async void AfterEpicCreate()
+    {
+        MudDialog.Close();
+        ReloadResource.Invoke();
+    }
+}

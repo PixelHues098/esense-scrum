@@ -4,7 +4,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
 
-<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SwimlaneList=@SwimlaneList/>
+<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SwimlaneList=@SwimlaneList ActiveSprintId=@ActiveSprintId ProjectType=@ProjectType/>
 <MudDropContainer T="Issue" Items="@ActiveIssueList" ItemsSelector="@((item,dropzone) => item.SwimlaneId.ToString() == dropzone)"
     ItemDropped="ItemUpdated" Class="d-flex flex-nowrap gap-4 overflow-auto pb-6" @ref="_container">
     <ChildContent>
@@ -28,7 +28,9 @@
     Project? ProjectData = new Project() { };
     List<Swimlane> SwimlaneList = new();
     List<Issue> ActiveIssueList = new();
+    int? ActiveSprintId = 0;
     List<User> UserList = new();
+    string ProjectType = "";
     MudDropContainer<Issue> _container;
 
     void ItemUpdated(MudItemDropInfo<Issue> dropItem)
@@ -60,16 +62,6 @@
         public string SectionColor { get; set; } = "";
     }
 
-    private List<KanBanSections> _sections = new()
-    {
-        new KanBanSections() { Name = "To Do", SectionColor = "red lighten-5" },
-        new KanBanSections() { Name = "In Progress", SectionColor = "blue lighten-5" },
-        new KanBanSections() { Name = "Code Review", SectionColor = "purple lighten-5" },
-        new KanBanSections() { Name = "Testing", SectionColor = "teal lighten-5" },
-        new KanBanSections() { Name = "Done", SectionColor = "lime lighten-5" },
-        new KanBanSections() { Name = "Blocked", SectionColor = "green lighten-5" },
-    };
-
     protected override async Task OnInitializedAsync()
     {
         UpdateParentComponentProjectId();
@@ -79,6 +71,7 @@
         SwimlaneList = ProjectData.GetOrderedSwimlaneList();
         ActiveIssueList = ProjectData.GetActiveProjectIssues();
         UserList = ProjectData.GetUserList();
+        ProjectType = ProjectData.Type;
         ReloadResource();
     }
 
@@ -88,6 +81,9 @@
         UserList = ProjectData.GetUserList();
         SwimlaneList = ProjectData.GetOrderedSwimlaneList();
         ActiveIssueList = ProjectData.GetActiveProjectIssues();
+        ActiveSprintId = ProjectData.ActiveSprint;
+        ProjectType = ProjectData.Type;
+
         await InvokeAsync(StateHasChanged);
         _container.Refresh();
     }

@@ -11,7 +11,7 @@
         <MudAvatarGroup Max=6 Spacing=3 MaxColor="Color.Primary">
             @foreach (var user in UserList)
             {
-                <MudAvatar Class=@(user.GetUserAvatarColor())> @user.FirstName[0] </MudAvatar>
+                <MudAvatar Class=@(user.GetUserAvatarColor())> @user.Username[0] </MudAvatar>
             }
         </MudAvatarGroup>
         <MudFab DisableElevation="true" StartIcon=@Icons.Filled.PersonAddAlt1 Size="Size.Small"
@@ -23,9 +23,13 @@
             <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Info"
                 OnClick=@OpenCreateIssueDialog Size="Size.Medium">Task
             </MudButton>
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Tertiary"
+            @if (ProjectType != "kanban")
+            {
+                <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" Color="Color.Tertiary"
                 OnClick=@OpenCreateSprintDialog Size="Size.Medium">Sprint
-            </MudButton>
+                </MudButton>
+            }
+
         </div>
         <div Class="flex-grow-0 align-self-center">
             <MudSelect Margin="Margin.Dense" Label="Sort by" T="string" Variant="Variant.Filled">
@@ -41,12 +45,14 @@
 @code {
     [Parameter] public List<User> UserList { get; set; } = new();
     [Parameter] public List<Sprint> SprintList { get; set; } = new();
+    [Parameter] public List<Epic> EpicList { get; set; } = new();
 
     [Parameter] public string ProjectId { get; set; } = string.Empty;
 
     [Parameter] public Action? ReloadResource { get; set; }
 
     [Parameter] public string Search { get; set; } = string.Empty;
+    [Parameter] public string ProjectType { get; set; } = string.Empty;
 
     public void OpenCreateSprintDialog()
     {
@@ -75,6 +81,7 @@
         dialogParam.Add("ReloadResource", ReloadResource);
         dialogParam.Add("SprintList", SprintList);
         dialogParam.Add("UserList", UserList);
+        dialogParam.Add("EpicList", EpicList);
         dialogParam.Add("AccessType", "create");
 
         var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };

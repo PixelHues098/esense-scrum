@@ -1,4 +1,5 @@
 using MyApplication;
+using static EnhancedMergeSort.EnhancedMergeSort;
 
 namespace MyApplication.Models
 {
@@ -18,15 +19,19 @@ namespace MyApplication.Models
         public Issue[]? Issues { get; set; }
         public Sprint[]? Sprints { get; set; }
         public Swimlane[]? Swimlanes { get; set; }
+        public Epic[]? Epics { get; set; }
 
-        public List<Sprint> GetSprintList()
+        public List<Sprint> GetSprintList(bool isDone)
         {
             try
             {
                 List<Sprint> sprintList = new List<Sprint>();
                 foreach (var sprint in this.Sprints)
                 {
-                    sprintList.Add(sprint);
+                    if (isDone == sprint.IsDone)
+                    {
+                        sprintList.Add(sprint);
+                    }
                 }
 
                 return sprintList;
@@ -74,6 +79,67 @@ namespace MyApplication.Models
             {
                 return new List<User>();
             }
+        }
+
+        public List<Epic> GetEpicList()
+        {
+            try
+            {
+                List<Epic> epicList = new List<Epic>();
+                foreach (var epic in this.Epics)
+                {
+                    epicList.Add(epic);
+                }
+
+                return epicList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Epic>();
+            }
+        }
+
+        public List<Epic> GetNameSortedEpicList()
+        {
+            try
+            {
+                List<KeyValuePair<int, int>> epicList = new();
+                Dictionary<int, Epic> epicDict = new();
+                List<Epic> sortedEpicList = new();
+                foreach (var epic in this.Epics)
+                {
+                    epicList.Add(new KeyValuePair<int, int>(Convert.ToInt32(epic.ID), Convert.ToInt32(epic.Name.ToCharArray()[0])));
+                    epicDict.Add(Convert.ToInt32(epic.ID), epic);
+                }
+
+                var epicListArr = epicList.ToArray();
+                sortPair(epicListArr);
+
+                foreach (var epic in epicListArr)
+                {
+                    sortedEpicList.Add(epicDict[epic.Key]);
+                }
+
+                return sortedEpicList;
+            }
+            catch (System.Exception)
+            {
+                return new List<Epic>();
+            }
+        }
+
+        public DateTime GetEarliestEpic()
+        {
+            DateTime earliestEpic = DateTime.MaxValue;
+            foreach (var epic in this.Epics)
+            {
+                if (earliestEpic > DateTime.Parse(epic.StartDate))
+                {
+                    earliestEpic = DateTime.Parse(epic.StartDate);
+                }
+            }
+
+            return earliestEpic;
         }
 
         public List<Issue> GetActiveProjectIssues()

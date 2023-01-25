@@ -121,7 +121,10 @@
     {
         var queryBody = new
         {
-
+            Name = Name,
+            Desc = Description,
+            NewEmail = OwnerEmail,
+            ProjectId = Int16.Parse(ProjectId)
         };
 
         var jwt = await ReadCookies();
@@ -129,7 +132,7 @@
         var client = new HttpClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
 
-        var response = await client.PostAsJsonAsync("http://localhost:8000/user/update", queryBody);
+        var response = await client.PostAsJsonAsync("http://localhost:8000/project/update", queryBody);
         OnUpdateInfoSuccess(response.StatusCode.ToString());
     }
 

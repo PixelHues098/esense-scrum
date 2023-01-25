@@ -1,0 +1,90 @@
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@inject IJSRuntime JsRuntime
+
+<MudDialog>
+    <DialogContent>
+        <div>
+            <MudChart ChartType="ChartType.Bar" ChartSeries="@Series" @bind-SelectedIndex="Index"
+                XAxisLabels=@(XAxisLabels.ToArray()) Width="100%" Height="350px"></MudChart>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ReportType { get; set; } = "";
+    [Parameter] public string ProjectId { get; set; } = "";
+    Project? ProjectData = new Project() { };
+    List<string> XAxisLabels = new();
+    List<ChartSeries> Series = new();
+    List<Sprint> SprintList = new();
+    private ChartOptions options = new ChartOptions() { YAxisLines = true };
+    void Submit() => MudDialog.Close();
+
+    private int Index = -1; //default value cannot be 0 -> first selectedindex is 0.
+
+    async protected override Task OnInitializedAsync()
+    {
+        ReloadResource();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ReloadResource();
+    }
+
+    async void ReloadResource()
+    {
+        ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
+        options.InterpolationOption = InterpolationOption.NaturalSpline;
+        ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
+        SprintList = ProjectData.GetSprintList(true);
+        GenerateReport();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async ValueTask<string> ReadCookies()
+    {
+        return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
+    }
+
+    async Task<Project> GetProjectByUrl(int ProjectId)
+    {
+        var getProjectQueryBody = new { ProjectID = ProjectId };
+        var jwt = await ReadCookies();
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Header", jwt.ToString());
+        var response = await client.PostAsJsonAsync("http://localhost:8000/project/get-by-id", getProjectQueryBody);
+        var project = await response.Content.ReadFromJsonAsync<Project>();
+        return project;
+    }
+
+
+
+    void GenerateReport()
+    {
+        Series.Clear();
+        XAxisLabels.Clear();
+        List<double> SprintData = new();
+        foreach (var sprint in SprintList)
+        {
+            int? totalPoints = 0;
+            foreach (var issue in ProjectData.Issues)
+            {
+                if (issue.SprintId == sprint.ID)
+                {
+                    totalPoints += issue.Points;
+                }
+            }
+            XAxisLabels.Add(sprint.Name);
+            SprintData.Add(Convert.ToDouble(totalPoints));
+        }
+
+        Series.Add(new ChartSeries() { Name = "Velocity", Data = SprintData.ToArray() });
+    }
+}

@@ -3,15 +3,11 @@
 @inject IJSRuntime JsRuntime
 <MudDialog>
     <DialogContent>
-        <MudChart ChartType="ChartType.Donut" Width="300px" Height="300px" InputData=@(ChartData.ToArray())
-            InputLabels=@(ChartLabel.ToArray())>
-            <CustomGraphics>
-                <text class="donut-inner-text" x="47%" y="35%" dominant-baseline="middle" text-anchor="middle"
-                    fill="black" font-family="Helvetica" font-size="2">Total</text>
-                <text class="donut-inner-text" x="47%" y="50%" dominant-baseline="middle" text-anchor="middle"
-                    fill="black" font-family="Helvetica" font-size="5">@(ChartData.ToArray().Sum().ToString())</text>
-            </CustomGraphics>
-        </MudChart>
+        <div class="d-flex flex-grow-1 gap-4 justify-center">
+            <div class="d-flex flex-grow-1 gap-4 justify-center">
+                <MudText Typo="Typo.h1">@DailyVelocity pts/day</MudText>
+            </div>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
@@ -26,10 +22,14 @@
     List<double> ChartData = new();
     List<string> ChartLabel = new();
 
+    Double DailyVelocity { get; set; } = 0;
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(true));
+
     async protected override Task OnInitializedAsync()
     {
         ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
-        GenerateUserContribution();
+        GenerateDailyVelocity();
     }
 
     async void ReloadResource()
@@ -55,25 +55,33 @@
         return await JsRuntime.InvokeAsync<string>("ReadCookie.ReadCookie", "jwt");
     }
 
-    void Submit() => MudDialog.Close(DialogResult.Ok(true));
-
-
-    public void GenerateUserContribution()
+    void GenerateDailyVelocity()
     {
-        ChartData.Clear();
-        ChartLabel.Clear();
-        foreach (var member in ProjectData.Members)
+        int? totalPointsDone = 0;
+        int totalSprintDays = 0;
+        Swimlane DoneSwimlane = new();
+
+        foreach (var swimlane in ProjectData.GetOrderedSwimlaneList())
         {
-            int? contributionSum = 0;
-            foreach (var issue in ProjectData.Issues)
+            if (swimlane.Name == "Done")
             {
-                if (issue.AssigneeId == member.ID)
-                {
-                    contributionSum += issue.Points;
-                }
+                DoneSwimlane = swimlane;
             }
-            ChartData.Add(Convert.ToDouble(contributionSum));
-            ChartLabel.Add(member.Username);
         }
+
+        foreach (var issue in ProjectData.Issues)
+        {
+            if (issue.SwimlaneId == DoneSwimlane.ID)
+            {
+                totalPointsDone += issue.Points;
+            }
+        }
+
+        foreach (var sprint in ProjectData.GetSprintList(true))
+        {
+            totalSprintDays += sprint.GetSprintDays();
+        }
+
+        DailyVelocity = Math.Round((double)totalPointsDone / (double)totalSprintDays, 2);
     }
 }

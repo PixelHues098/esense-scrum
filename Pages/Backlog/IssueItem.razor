@@ -15,9 +15,13 @@
             @Context.Description
         </div>
 
-        <MudChip Text="blue" Variant="Variant.Filled" Class="white-text" Size="Size.Small">
-            {EPIC TITLE HERE}
-        </MudChip>
+        @if (ContextEpic.ID > 0)
+        {
+            <MudChip Text="blue" Variant="Variant.Filled" Class=@("white-text align-self-center " +
+            ContextEpic.GetEpicColor()) Size="Size.Small" style="min-width: 120px;">
+                @ContextEpic.Name.ToUpper()
+            </MudChip>
+        }
 
 
         @if (Context.AssigneeId == null)
@@ -26,8 +30,9 @@
         }
         else
         {
-            <MudAvatar Class="blue lighten-3" Variant="Variant.Filled" Size="Size.Small">
-                @GetAssigneeNameById(Context.AssigneeId).ToUpper()[0]
+            <MudAvatar Class=@(GetAssigneeById(Context.AssigneeId).GetUserAvatarColor()) Variant="Variant.Filled"
+            Size="Size.Small">
+                @GetAssigneeById(Context.AssigneeId).Username.ToUpper()[0]
             </MudAvatar>
         }
 
@@ -48,8 +53,16 @@
     [Parameter] public Issue Context { get; set; }
     [Parameter] public List<User> UserList { get; set; } = new();
     [Parameter] public List<Sprint> SprintList { get; set; } = new();
+    [Parameter] public List<Epic> EpicList { get; set; } = new();
     [Parameter] public Action? ReloadResource { get; set; }
+    public Epic ContextEpic { get; set; } = new();
+    public User ContextAssignee { get; set; } = new();
     [Parameter] public string ProjectId { get; set; } = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ContextEpic = GetContextEpic(Context.EpicId, EpicList);
+    }
 
     public void OpenIssueDialog(string accessType)
     {
@@ -57,6 +70,7 @@
         dialogParam.Add("ProjectId", ProjectId);
         dialogParam.Add("ReloadResource", ReloadResource);
         dialogParam.Add("SprintList", SprintList);
+        dialogParam.Add("EpicList", EpicList);
         dialogParam.Add("UserList", UserList);
         dialogParam.Add("AccessType", accessType);
         dialogParam.Add("Context", Context);
@@ -72,16 +86,16 @@
         }
     }
 
-    public string GetAssigneeNameById(int? assigneeId)
+    public User GetAssigneeById(int? assigneeId)
     {
         foreach (var user in UserList)
         {
             if (user.ID == assigneeId)
             {
-                return user.FirstName;
+                return user;
             }
         }
-        return "?";
+        return new User();
     }
 
     public void DeleteIssueDialog()
@@ -93,5 +107,20 @@
 
         var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         Dialog.Show<DeleteIssueForm>("Delete issue " + Context.ID + "?", dialogParam, options);
+    }
+
+    Epic GetContextEpic(int? epicId, List<Epic> epicList)
+    {
+        if (!(epicId is null))
+        {
+            foreach (var epic in epicList)
+            {
+                if (epicId == epic.ID)
+                {
+                    return epic;
+                }
+            }
+        }
+        return new Epic();
     }
 }

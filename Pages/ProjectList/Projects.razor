@@ -47,7 +47,7 @@
         }
         else
         {
-            <NoProjectFound />
+            <NoProjectFound ReloadResource=@ReloadResource />
         }
     }
     else
@@ -89,6 +89,14 @@
         var joinedProjects = await response.Content.ReadFromJsonAsync<Project[]>();
 
         return new List<Project>(joinedProjects);
+    }
+
+    async void ReloadResource()
+    {
+        var jwt = await ReadCookies();
+
+        JoinedProjects = await GetJoinedProjects(jwt);
+        await InvokeAsync(StateHasChanged);
     }
 
     void OpenProject(string projectId)

@@ -5,7 +5,8 @@
 @inject IJSRuntime JsRuntime
 @inject IDialogService Dialog
 <PageTitle>Backlog</PageTitle>
-<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SprintList=@SprintList />
+<FilterTools UserList=@UserList ProjectId=@ProjectId ReloadResource=@ReloadResource SprintList=@SprintList
+    EpicList=@EpicList ProjectType=@ProjectType />
 <MudDropContainer T="Issue" Items=@ProjectData.Issues
     ItemsSelector="@((item,dropzone) => item.SprintId.ToString() == dropzone)" ItemDropped="ItemUpdated"
     @ref="_container">
@@ -41,7 +42,7 @@
     </ChildContent>
     <ItemRenderer>
         <IssueItem Context=@context ProjectId=@ProjectId ReloadResource=@ReloadResource UserList=@UserList
-            SprintList=@SprintList />
+            SprintList=@SprintList EpicList=@EpicList />
     </ItemRenderer>
 </MudDropContainer>
 
@@ -54,6 +55,8 @@
     Project? ProjectData = new Project() { };
     List<Sprint> SprintList = new();
     List<User> UserList = new();
+    List<Epic> EpicList = new();
+    string ProjectType = "";
     private MudDropContainer<Issue> _container;
 
     void ItemUpdated(MudItemDropInfo<Issue> dropItem)
@@ -77,14 +80,18 @@
 
         ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
         UserList = ProjectData.GetUserList();
-        SprintList = ProjectData.GetSprintList();
+        SprintList = ProjectData.GetSprintList(false);
+        EpicList = ProjectData.GetEpicList();
+        ProjectType = ProjectData.Type;
     }
 
     async void ReloadResource()
     {
         ProjectData = await GetProjectByUrl(Int16.Parse(ProjectId));
         UserList = ProjectData.GetUserList();
-        SprintList = ProjectData.GetSprintList();
+        SprintList = ProjectData.GetSprintList(false);
+        EpicList = ProjectData.GetEpicList();
+        ProjectType = ProjectData.Type;
         await InvokeAsync(StateHasChanged);
         _container.Refresh();
     }

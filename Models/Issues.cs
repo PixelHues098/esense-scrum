@@ -19,6 +19,7 @@ namespace MyApplication.Models
         public int? ProjectId { get; init; }
         public int? SwimlaneId { get; init; }
         public int? SprintId { get; init; }
+        public int? EpicId { get; init; }
 
         public string GetIssueIconByType()
         {

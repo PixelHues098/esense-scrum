@@ -38,12 +38,14 @@
 </MudContainer>
 
 @code {
+    [Parameter] public Action? ReloadResource { get; set; }
     public void OpenCreateSprintDialog(string projectType)
     {
         var dialogParam = new DialogParameters() { };
         dialogParam.Add("ProjectType", projectType);
+        dialogParam.Add("ReloadResource", ReloadResource);
 
         var options = new DialogOptions { DisableBackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        Dialog.Show<CreateProjectForm>("Create Sprint", dialogParam, options);
+        Dialog.Show<CreateProjectForm>("Create Project", dialogParam, options);
     }
 }
